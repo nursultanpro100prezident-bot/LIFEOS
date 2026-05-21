@@ -4,42 +4,2643 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>LIFEOS — Умный календарь</title>
-
-<!-- Geist Sans + Geist Mono via Google Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
-
 <link rel="stylesheet" href="styles.css">
-
-<!-- React + Babel -->
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
-
-<!-- Dexie (IndexedDB wrapper) — must load BEFORE storage scripts -->
 <script src="https://unpkg.com/dexie@4.0.10/dist/dexie.min.js" crossorigin="anonymous"></script>
 </head>
 <body data-palette="pastels" data-theme="light" data-density="cozy">
 <div id="app"></div>
-
-<!--
-  Load order (critical):
-  1. storage/db.js    — IndexedDB layer (plain JS, needs Dexie global)
-  2. storage/sync.js  — File System + Gist layer (plain JS, needs LIFEOS_DB)
-  3. data.jsx         — Default/demo data → window.LIFEOS_DATA
-  4. views.jsx        — UI components (read LIFEOS_DATA refs)
-  5. overlays.jsx     — Modal components
-  6. tweaks-panel.jsx — Tweaks panel + useTweaks
-  7. app.jsx          — Root: inits DB, loads data, wires everything together
--->
 <script src="storage/db.js"></script>
 <script src="storage/sync.js"></script>
+<script type="text/babel">
+/* eslint-disable */
+// LIFEOS — sample data: categories + time blocks + goals/context
+// Modeled after the user's reference screenshots (May 2026).
 
-<script type="text/babel" src="data.js"></script>
-<script type="text/babel" src="views.js"></script>
-<script type="text/babel" src="overlays.js"></script>
-<script type="text/babel" src="tweaks-panel.js"></script>
-<script type="text/babel" src="app.js"></script>
+const CATEGORIES = [
+  {
+    id: 'business',
+    name: 'BUSINESS',
+    nameRu: 'Бизнес',
+    tagline: 'Стратегия, рост, главные ставки проекта АПОЛЛОН.',
+    description:
+      'Главное направление профессиональной жизни. Здесь живут стратегические сессии (ГВЦ), переговоры, ключевые решения и планирование квартала.',
+    swatch: 'var(--c-business)',
+    swatchVar: '--c-business',
+    icon: 'briefcase',
+    goals: [
+      { id: 'g1', title: 'Закрыть раунд Series A', due: 'Q3 · 2026', progress: 62, owner: '4 milestones' },
+      { id: 'g2', title: 'Запустить АПОЛЛОН v2', due: 'Авг 2026', progress: 38, owner: '12 tasks' },
+      { id: 'g3', title: 'Команда продукта · 8 чел.', due: 'Дек 2026', progress: 75, owner: '6/8 нанято' },
+    ],
+    notes:
+      'Главная Великая Цель проекта АПОЛЛОН — стоит выше остальных равных Целей. Достижение ВГЦ приводит к Великому Видению. Без колебаний — в бой, с фокусом, приближая ГВЦ ещё ближе.',
+    links: [
+      { id: 'l1', title: 'Roadmap АПОЛЛОН Q2', meta: 'Notion · 14 страниц' },
+      { id: 'l2', title: 'Финансовая модель', meta: 'Sheets · обновлено вчера' },
+      { id: 'l3', title: 'Pitch deck v7', meta: 'Figma · 28 слайдов' },
+      { id: 'l4', title: 'Investor outreach', meta: 'Airtable' },
+    ],
+    history: [3, 5, 4, 7, 6, 5, 8, 6, 9, 7, 8, 6],
+  },
+  {
+    id: 'health',
+    name: 'Health',
+    nameRu: 'Здоровье',
+    tagline: 'SPARTA, дисциплина тела, восстановление.',
+    description:
+      'Тренировки, восстановление, телесная практика. SPARTA — ежедневный 2-часовой блок. Agoge, FULL LEONID, PHITIDIA — суб-программы.',
+    swatch: 'var(--c-health)',
+    swatchVar: '--c-health',
+    icon: 'spark',
+    goals: [
+      { id: 'h1', title: 'Marathon · sub-3:30', due: 'Окт 2026', progress: 41, owner: 'нед. 12/24' },
+      { id: 'h2', title: 'Жим лёжа 120 кг', due: 'Авг 2026', progress: 78, owner: 'тек. 105' },
+      { id: 'h3', title: 'Растяжка Монаха · 60 дней', due: 'Стрик', progress: 53, owner: '32/60' },
+    ],
+    notes:
+      'SPARTA — основной режим. 7 дней в неделю по 2 часа. FULL LEONID — full body вторая половина дня. PHITIDIA — вечерняя короткая сессия. Sundays — Hiking.',
+    links: [
+      { id: 'hl1', title: 'Программа SPARTA · цикл 4', meta: 'PDF · 36 страниц' },
+      { id: 'hl2', title: 'Дневник восстановления', meta: 'Apple Health' },
+      { id: 'hl3', title: 'Питание · протокол', meta: 'Notes' },
+      { id: 'hl4', title: 'Тренер · контакт', meta: 'Whatsapp' },
+    ],
+    history: [8, 7, 8, 9, 7, 8, 9, 9, 8, 9, 9, 8],
+  },
+  {
+    id: 'learning',
+    name: 'Learning',
+    nameRu: 'Учёба',
+    tagline: 'Чтение, языки, мастерство ремесла.',
+    description:
+      'Книги, курсы, иностранные языки. Ежедневный блок «Чтение» — обязательный. Architecture — изучение архитектурных принципов.',
+    swatch: 'var(--c-learning)',
+    swatchVar: '--c-learning',
+    icon: 'book',
+    goals: [
+      { id: 'le1', title: '24 книги за 2026 год', due: 'Дек 2026', progress: 58, owner: '14 / 24' },
+      { id: 'le2', title: 'Архитектура · курс MIT', due: 'Июл 2026', progress: 33, owner: '4 / 12 модулей' },
+    ],
+    notes:
+      'Чтение — каждый день 60 минут перед сном. Текущая книга — Дезигн оф эвридей зингс, Norman. Архитектурный курс по понедельникам и средам.',
+    links: [
+      { id: 'lel1', title: 'Reading list 2026', meta: 'Goodreads' },
+      { id: 'lel2', title: 'MIT Architecture · Lecture 4', meta: 'Видео · 1:24' },
+      { id: 'lel3', title: 'Конспекты чтения', meta: 'Obsidian · 142 заметки' },
+    ],
+    history: [4, 5, 6, 5, 6, 7, 6, 7, 7, 8, 7, 7],
+  },
+  {
+    id: 'creative',
+    name: 'Creative',
+    nameRu: 'Творчество',
+    tagline: 'Музыка Аполлон, Equitation, проект жизни.',
+    description:
+      'Творческие практики. Музыкальное приложение АПОЛЛО — проект года. Equitation — конная подготовка. Дневник.',
+    swatch: 'var(--c-creative)',
+    swatchVar: '--c-creative',
+    icon: 'note',
+    goals: [
+      { id: 'c1', title: 'Приложение АПОЛЛО · MVP', due: 'Сен 2026', progress: 47, owner: '8 / 17 экранов' },
+      { id: 'c2', title: 'Equitation · Level 2', due: 'Q4 2026', progress: 28, owner: 'нач. курс' },
+      { id: 'c3', title: 'Дневник · 365 дней подряд', due: 'Стрик', progress: 87, owner: '317 / 365' },
+    ],
+    notes:
+      'Музыка Аполло — приложение для медитативной музыки. Цель — MVP к сентябрю. Equitation — каждый четверг и воскресенье.',
+    links: [
+      { id: 'cl1', title: 'Аполло · Figma', meta: '54 экрана' },
+      { id: 'cl2', title: 'Equitation school', meta: 'maps · 12 km' },
+      { id: 'cl3', title: 'Дневник 2026', meta: 'Day One · 317 записей' },
+    ],
+    history: [3, 4, 4, 5, 4, 5, 6, 6, 5, 6, 7, 6],
+  },
+  {
+    id: 'family',
+    name: 'Family',
+    nameRu: 'Семья',
+    tagline: 'Marsik · Love Budget · близкие.',
+    description:
+      'Семья и близкие отношения. Marsik Date — еженедельный субботний блок. Love Budget — совместное финансовое планирование.',
+    swatch: 'var(--c-family)',
+    swatchVar: '--c-family',
+    icon: 'heart',
+    goals: [
+      { id: 'f1', title: 'Marsik Date · еженедельно', due: 'Стрик', progress: 92, owner: '24 / 26' },
+      { id: 'f2', title: 'Семейная поездка', due: 'Авг 2026', progress: 22, owner: 'план' },
+    ],
+    notes:
+      'Marsik Date — суббота 15:30, неприкосновенный блок. Love Budget — раз в две недели по средам, обсуждение совместных целей и финансов.',
+    links: [
+      { id: 'fl1', title: 'Семейный бюджет 2026', meta: 'Notion' },
+      { id: 'fl2', title: 'Идеи для свиданий', meta: '42 идеи' },
+      { id: 'fl3', title: 'Поездка · Италия', meta: 'Pinterest' },
+    ],
+    history: [2, 3, 3, 2, 3, 3, 3, 3, 3, 3, 3, 3],
+  },
+  {
+    id: 'work',
+    name: 'Work',
+    nameRu: 'Работа',
+    tagline: 'Hiking, активный отдых, природа.',
+    description:
+      'Активный отдых и природа. Hiking — субботние выходы. Восстановление после рабочей недели.',
+    swatch: 'var(--c-work)',
+    swatchVar: '--c-work',
+    icon: 'tree',
+    goals: [
+      { id: 'w1', title: '12 hiking trails за год', due: 'Дек 2026', progress: 50, owner: '6 / 12' },
+    ],
+    notes:
+      'Hiking — каждую субботу с 09:00. Ротация маршрутов. Зимой — короткие маршруты, летом — полные дни.',
+    links: [
+      { id: 'wl1', title: 'Маршруты 2026', meta: 'Maps · 12 пинов' },
+      { id: 'wl2', title: 'Снаряжение · чек-лист', meta: 'Notes' },
+    ],
+    history: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+  },
+  {
+    id: 'finance',
+    name: 'Finance',
+    nameRu: 'Финансы',
+    tagline: 'SOA, отчётность, капитал.',
+    description:
+      'Финансовая дисциплина. SOA — еженедельный обзор счетов. Личные финансы, инвестиции, ежемесячный обзор.',
+    swatch: 'var(--c-finance)',
+    swatchVar: '--c-finance',
+    icon: 'coin',
+    goals: [
+      { id: 'fi1', title: 'Подушка · 12 мес. расходов', due: 'Дек 2026', progress: 64, owner: '7.7 / 12' },
+      { id: 'fi2', title: 'Инвест портфель ребаланс', due: 'Квартально', progress: 100, owner: 'Q1 ✓' },
+    ],
+    notes:
+      'SOA (State of Affairs) — еженедельный обзор по пятницам. Ребалансировка портфеля каждый квартал. Контроль расходов через 4 категории.',
+    links: [
+      { id: 'fil1', title: 'SOA Q2 2026', meta: 'Sheets' },
+      { id: 'fil2', title: 'Investment thesis', meta: 'Notion' },
+    ],
+    history: [2, 2, 2, 2, 3, 2, 2, 3, 2, 3, 2, 3],
+  },
+];
+
+const CAT_BY_ID = Object.fromEntries(CATEGORIES.map(c => [c.id, c]));
+
+// Block template: time-block can have a "subname" (the actual badge label like "SPARTA")
+// We model the week May 18-24, 2026. Today is Wed May 20.
+//
+// Format: { id, day (0-6 mon-sun), start (h), end (h), title, sub?, cat, allDay?, recur?, notes?, checklist?, location? }
+
+const WEEK_BLOCKS = [
+  // ============ MON 18 ============
+  { id: 'b1',  day: 0, start: 7,    end: 9,    title: 'SPARTA',     cat: 'health', recur: true, notes: 'Утренний 2-часовой блок. Базовая программа цикла 4.', checklist: ['Разминка 15 мин','Силовой 60 мин','Кардио 30 мин','Растяжка'] },
+  { id: 'b2',  day: 0, start: 9.2,  end: 9.7,  title: 'Agoge',      cat: 'health', recur: true, sub: 'sub-program' },
+  { id: 'b3',  day: 0, start: 9.7,  end: 10.5, title: 'FULL LEONID',cat: 'health', recur: true, sub: 'sub-program' },
+  { id: 'b4',  day: 0, start: 10.5, end: 13,   title: 'ГВЦ',        cat: 'business', recur: true, notes: 'Главная Великая Цель — работа над проектом АПОЛЛОН. Полное погружение и фокус.', checklist: ['Roadmap review','Investor email','Tech architecture','Product strategy'] },
+  { id: 'b5',  day: 0, start: 13.5, end: 14.5, title: 'Чтение',     cat: 'learning', recur: true },
+  { id: 'b6',  day: 0, start: 14.5, end: 15.5, title: 'FULL LEONID',cat: 'health' },
+  { id: 'b7',  day: 0, start: 15.5, end: 16.5, title: 'ГВЦ',        cat: 'business' },
+  { id: 'b8',  day: 0, start: 16.5, end: 17.5, title: 'PHITIDIA',   cat: 'health', recur: true },
+  { id: 'b9',  day: 0, start: 17.5, end: 18.5, title: 'Дневник',    cat: 'creative', recur: true, notes: 'Ежедневная запись.' },
+  { id: 'b10', day: 0, start: 19,   end: 20,   title: 'Цветы',      cat: 'family' },
+  { id: 'b11', day: 0, start: 20,   end: 21,   title: 'Agoge',      cat: 'health' },
+
+  // ============ TUE 19 ============
+  { id: 'c1', day: 1, start: 7,    end: 9,    title: 'SPARTA',      cat: 'health', recur: true },
+  { id: 'c2', day: 1, start: 9.16, end: 9.5,  title: 'Agoge',       cat: 'health', recur: true },
+  { id: 'c3', day: 1, start: 9.5,  end: 11,   title: 'FULL LEONID', cat: 'health', recur: true },
+  { id: 'c4', day: 1, start: 11,   end: 14,   title: 'ГВЦ',         cat: 'business', recur: true },
+  { id: 'c5', day: 1, start: 14,   end: 15,   title: 'FULL LEONID', cat: 'health' },
+  { id: 'c6', day: 1, start: 15,   end: 16,   title: 'PHITIDIA',    cat: 'health' },
+  { id: 'c7', day: 1, start: 16.5, end: 17.5, title: 'Дневник',     cat: 'creative' },
+  { id: 'c8', day: 1, start: 17.5, end: 18.5, title: 'Чтение',      cat: 'learning' },
+  { id: 'c9', day: 1, start: 19,   end: 20,   title: 'Agoge',       cat: 'health' },
+
+  // ============ WED 20 (TODAY) ============
+  { id: 'd1', day: 2, start: 7,    end: 9,    title: 'SPARTA',      cat: 'health', recur: true,
+    notes: 'Утренний блок SPARTA — основа дня. Программа: верх тела + кардио. Цикл 4, неделя 2.\n\nДисциплина превыше всего. Без исключений. Tempo: agressive.',
+    checklist: ['Разминка', 'Жим лёжа · 5×5 @ 100kg', 'Тяга · 5×5 @ 110kg', 'Кардио · 30 мин zone 2', 'Растяжка · 15 мин'],
+    location: 'Дом · спортзал' },
+  { id: 'd2', day: 2, start: 9.16, end: 9.5,  title: 'Agoge',       cat: 'health', recur: true },
+  { id: 'd3', day: 2, start: 9.5,  end: 10,   title: 'FULL LEONID', cat: 'health' },
+  { id: 'd4', day: 2, start: 10,   end: 15,   title: 'ГВЦ',         cat: 'business', recur: true,
+    notes: 'Работа над Главной Великой Целью проекта АПОЛЛОН. Ни минуты не колеблясь, рвёшься в бой, с полным погружением и фокусом, приближая ГВЦ ещё ближе. Главная Великая Цель — это Цель, стоящая выше других равных Целей проекта Аполлон, достижение которых приводит к Великому Видению.',
+    checklist: ['Архитектура v2 · review','Roadmap Q3','Investor outreach · 5 emails','Product strategy doc','Команда · 1:1 ×3'],
+    location: 'Офис · АПОЛЛОН HQ' },
+  { id: 'd5', day: 2, start: 10,   end: 11,   title: 'Love Budget', cat: 'family',
+    notes: 'Совместный обзор бюджета и целей с партнёром.',
+    checklist: ['Доходы за 2 недели','Расходы по категориям','Цели на месяц','Совместные проекты'] },
+  { id: 'd6', day: 2, start: 13.7, end: 14.2, title: 'FULL LEONID', cat: 'health' },
+  { id: 'd7', day: 2, start: 16,   end: 17,   title: 'Equitation',  cat: 'creative',
+    notes: 'Урок верховой езды. Level 2 · 4 из 12.',
+    location: 'Equitation school · 12 km' },
+  { id: 'd8', day: 2, start: 17,   end: 18,   title: 'Стратегическое обсуждение', cat: 'business' },
+  { id: 'd9', day: 2, start: 18,   end: 19,   title: 'PHITIDIA',    cat: 'health' },
+  { id: 'd10',day: 2, start: 19,   end: 20,   title: 'Приложение АПОЛЛО', cat: 'creative',
+    notes: 'Работа над приложением. Сегодня — экраны онбординга.',
+    checklist: ['Onboarding 1/3','Onboarding 2/3','Onboarding 3/3','Превью в Figma'] },
+  { id: 'd11',day: 2, start: 20,   end: 21,   title: 'Чтение',      cat: 'learning', recur: true,
+    notes: 'Текущая книга — The Design of Everyday Things, Norman.',
+    checklist: ['Глава 4','Заметки в Obsidian'] },
+  { id: 'd12',day: 2, start: 21,   end: 22,   title: 'Agoge',       cat: 'health' },
+
+  // ============ THU 21 ============
+  { id: 'e1', day: 3, start: 7,    end: 9,    title: 'SPARTA',      cat: 'health', recur: true },
+  { id: 'e2', day: 3, start: 9.16, end: 9.83, title: 'Растяжка',    cat: 'health', recur: true, sub: 'дополнительно' },
+  { id: 'e3', day: 3, start: 9.83, end: 10.5, title: 'Agoge',       cat: 'health' },
+  { id: 'e4', day: 3, start: 10.5, end: 13.5, title: 'FULL LEONID', cat: 'health', recur: true },
+  { id: 'e5', day: 3, start: 14,   end: 16,   title: 'Архитектура', cat: 'learning', notes: 'MIT Architecture · Lecture 5' },
+  { id: 'e6', day: 3, start: 16,   end: 18,   title: 'Marsik Date', cat: 'family' },
+  { id: 'e7', day: 3, start: 18,   end: 19,   title: 'PHITIDIA',    cat: 'health' },
+  { id: 'e8', day: 3, start: 19,   end: 20,   title: 'Чтение',      cat: 'learning' },
+  { id: 'e9', day: 3, start: 20,   end: 21,   title: 'Agoge',       cat: 'health' },
+
+  // ============ FRI 22 ============
+  { id: 'f1', day: 4, start: 7,    end: 9,    title: 'SPARTA',      cat: 'health', recur: true },
+  { id: 'f2', day: 4, start: 9.16, end: 9.7,  title: 'Растяжка',    cat: 'health' },
+  { id: 'f3', day: 4, start: 9.7,  end: 10.5, title: 'Agoge',       cat: 'health' },
+  { id: 'f4', day: 4, start: 10.5, end: 13,   title: 'FULL LEONID', cat: 'health', recur: true },
+  { id: 'f5', day: 4, start: 13.5, end: 15,   title: 'ГВЦ',         cat: 'business' },
+  { id: 'f6', day: 4, start: 15,   end: 16,   title: 'FULL LEONID', cat: 'health' },
+  { id: 'f7', day: 4, start: 16,   end: 17,   title: 'SOA',         cat: 'finance', notes: 'Еженедельный обзор финансов.', checklist: ['Счета · обзор','Расходы по категориям','Сбережения · % от дохода','SOA таблица'] },
+  { id: 'f8', day: 4, start: 17,   end: 18,   title: 'PHITIDIA',    cat: 'health' },
+  { id: 'f9', day: 4, start: 18,   end: 19,   title: 'Дневник',     cat: 'creative' },
+  { id: 'f10',day: 4, start: 19,   end: 20,   title: 'Чтение',      cat: 'learning' },
+  { id: 'f11',day: 4, start: 20,   end: 21,   title: 'Agoge',       cat: 'health' },
+
+  // ============ SAT 23 ============
+  { id: 'g1', day: 5, start: 9,    end: 12,   title: 'Hiking',      cat: 'work', notes: 'Маршрут · Бутаковский водопад. 12 км туда-обратно.', checklist: ['Снаряжение','Вода 2 л','Перекус','Камера'] },
+  { id: 'g2', day: 5, start: 12,   end: 13,   title: 'Растяжка Монаха', cat: 'health' },
+  { id: 'g3', day: 5, start: 13.5, end: 15,   title: 'FULL LEONID', cat: 'health' },
+  { id: 'g4', day: 5, start: 16,   end: 17.5, title: 'Музыка Аполло', cat: 'creative', notes: 'Запись новых треков. Сессия 8.' },
+  { id: 'g5', day: 5, start: 18,   end: 19,   title: 'PHITIDIA',    cat: 'health' },
+  { id: 'g6', day: 5, start: 19,   end: 20,   title: 'Дневник',     cat: 'creative' },
+  { id: 'g7', day: 5, start: 20,   end: 21,   title: 'Чтение',      cat: 'learning' },
+
+  // ============ SUN 24 ============
+  { id: 'h1', day: 6, start: 13.5, end: 15,   title: 'FULL LEONID', cat: 'health' },
+  { id: 'h2', day: 6, start: 15.5, end: 17,   title: 'Marsik Date', cat: 'family', notes: 'Еженедельный субботний блок. Неприкосновенный.' },
+  { id: 'h3', day: 6, start: 18,   end: 19,   title: 'PHITIDIA',    cat: 'health' },
+];
+
+// All-day items (reminders, tasks without time)
+const ALL_DAY = [
+  { id: 'ad1', day: 2, title: 'Позвонить маме',         cat: 'family',  type: 'reminder' },
+  { id: 'ad2', day: 2, title: 'Растяжка Монаха · 32/60', cat: 'health',  type: 'task' },
+  { id: 'ad3', day: 4, title: 'SOA · подготовить',       cat: 'finance', type: 'task' },
+];
+
+// Tints per category — derived from --c-* (L C H) on the fly:
+// background = oklch(L% C H / 0.45)
+// edge      = oklch(L% C H / 0.65)
+// bar       = oklch( (L-25)% (C+0.10) H )  // strong stripe
+// ink       = oklch( 28% C H )             // text on tint (dark)
+
+function tintStyle(catId) {
+  // catId is the React-side id: business, health, learning, creative, family, work, finance
+  // Each maps to a CSS palette block --c-{catId}, --c-{catId}-bar, --c-{catId}-ink defined in styles.css
+  return {
+    '--tint':      `var(--c-${catId})`,
+    '--tint-edge': `var(--c-${catId}-bar)`,
+    '--tint-bar':  `var(--c-${catId}-bar)`,
+    '--tint-ink':  `var(--c-${catId}-ink)`,
+  };
+}
+
+// Each --c-* in CSS is an "L% C H" triplet (NOT a full color).
+// We compose oklch() colors via these custom-property strings in CSS,
+// so to build derived strong/ink vars we set them as separate triplets here.
+// Done in app boot — see app.jsx setDerivedSwatches().
+
+window.LIFEOS_DATA = { CATEGORIES, CAT_BY_ID, WEEK_BLOCKS, ALL_DAY, tintStyle };
+
+</script>
+
+<script type="text/babel">
+/* eslint-disable */
+// LIFEOS — views.jsx
+// Day view, Week view, Daily Summary strip, Sidebar (mini-month + categories)
+
+const { useState, useEffect, useMemo, useRef, useCallback } = React;
+const { CATEGORIES, CAT_BY_ID, WEEK_BLOCKS, ALL_DAY, tintStyle } = window.LIFEOS_DATA;
+
+// ============== ICONS (minimal stroke set) ==============
+function Icon({ name, size = 18 }) {
+  const s = { width: size, height: size, fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round', strokeLinejoin: 'round' };
+  switch (name) {
+    case 'search':   return <svg viewBox="0 0 24 24" {...s}><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>;
+    case 'plus':     return <svg viewBox="0 0 24 24" {...s}><path d="M12 5v14M5 12h14"/></svg>;
+    case 'close':    return <svg viewBox="0 0 24 24" {...s}><path d="m6 6 12 12M18 6 6 18"/></svg>;
+    case 'chevron-r':return <svg viewBox="0 0 24 24" {...s}><path d="m9 6 6 6-6 6"/></svg>;
+    case 'chevron-l':return <svg viewBox="0 0 24 24" {...s}><path d="m15 6-6 6 6 6"/></svg>;
+    case 'check':    return <svg viewBox="0 0 24 24" {...s}><path d="m5 12 5 5 9-11"/></svg>;
+    case 'recur':    return <svg viewBox="0 0 24 24" {...s}><path d="M3 12a9 9 0 0 1 16-5.7L20 8M21 12a9 9 0 0 1-16 5.7L4 16"/><path d="M20 4v4h-4M4 20v-4h4"/></svg>;
+    case 'clock':    return <svg viewBox="0 0 24 24" {...s}><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>;
+    case 'bell':     return <svg viewBox="0 0 24 24" {...s}><path d="M6 8a6 6 0 0 1 12 0c0 7 3 8 3 8H3s3-1 3-8M10 21a2 2 0 0 0 4 0"/></svg>;
+    case 'pin':      return <svg viewBox="0 0 24 24" {...s}><path d="M12 22s7-7.5 7-13a7 7 0 0 0-14 0c0 5.5 7 13 7 13Z"/><circle cx="12" cy="9" r="2.5"/></svg>;
+    case 'list':     return <svg viewBox="0 0 24 24" {...s}><path d="M4 6h16M4 12h16M4 18h16"/></svg>;
+    case 'briefcase':return <svg viewBox="0 0 24 24" {...s}><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>;
+    case 'spark':    return <svg viewBox="0 0 24 24" {...s}><path d="M12 3v6M12 15v6M3 12h6M15 12h6"/><circle cx="12" cy="12" r="3"/></svg>;
+    case 'book':     return <svg viewBox="0 0 24 24" {...s}><path d="M4 19V5a2 2 0 0 1 2-2h13v18H6a2 2 0 0 1-2-2Zm0 0a2 2 0 0 1 2-2h13"/></svg>;
+    case 'note':     return <svg viewBox="0 0 24 24" {...s}><path d="M9 18V6l12-3v12"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="15" r="3"/></svg>;
+    case 'heart':    return <svg viewBox="0 0 24 24" {...s}><path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10Z"/></svg>;
+    case 'tree':     return <svg viewBox="0 0 24 24" {...s}><path d="M12 3 4 14h4l-3 5h14l-3-5h4Z"/><path d="M12 19v3"/></svg>;
+    case 'coin':     return <svg viewBox="0 0 24 24" {...s}><circle cx="12" cy="12" r="9"/><path d="M9 9h4a2 2 0 1 1 0 4h-2a2 2 0 1 0 0 4h4"/></svg>;
+    case 'attach':   return <svg viewBox="0 0 24 24" {...s}><path d="m21 12-9 9a5 5 0 0 1-7-7l9-9a3 3 0 0 1 5 5l-9 9a1 1 0 0 1-2-2l8-8"/></svg>;
+    case 'sun':      return <svg viewBox="0 0 24 24" {...s}><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4"/></svg>;
+    case 'moon':     return <svg viewBox="0 0 24 24" {...s}><path d="M21 13.5A9 9 0 1 1 10.5 3a7 7 0 0 0 10.5 10.5Z"/></svg>;
+    case 'expand':   return <svg viewBox="0 0 24 24" {...s}><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></svg>;
+    case 'arrow-r':  return <svg viewBox="0 0 24 24" {...s}><path d="M5 12h14M13 6l6 6-6 6"/></svg>;
+    case 'arrow-up': return <svg viewBox="0 0 24 24" {...s}><path d="M12 19V5M5 12l7-7 7 7"/></svg>;
+    case 'flag':     return <svg viewBox="0 0 24 24" {...s}><path d="M5 21V4a1 1 0 0 1 1-1h12l-2 4 2 4H6"/></svg>;
+    case 'sparkles': return <svg viewBox="0 0 24 24" {...s}><path d="M12 3v6M12 15v6M3 12h6M15 12h6M5.5 5.5 9 9M15 15l3.5 3.5M5.5 18.5 9 15M15 9l3.5-3.5"/></svg>;
+    case 'cmd':      return <svg viewBox="0 0 24 24" {...s}><path d="M9 9h6v6H9z"/><path d="M9 9V6a3 3 0 1 0-3 3h3ZM9 15v3a3 3 0 1 1-3-3h3ZM15 9V6a3 3 0 1 1 3 3h-3ZM15 15v3a3 3 0 1 0 3-3h-3Z"/></svg>;
+  }
+  return null;
+}
+
+// ============== UTILITIES ==============
+const HOUR_PX = 56;   // height of one hour in day-view
+const DAY_START = 6;  // 06:00
+const DAY_END = 22;   // 22:00
+
+function fmtH(hFloat) {
+  const h = Math.floor(hFloat);
+  const m = Math.round((hFloat - h) * 60);
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+const DOW_SHORT = ['пн','вт','ср','чт','пт','сб','вс'];
+const DOW_FULL  = ['Понедельник','Вторник','Среда','Четверг','Пятница','Суббота','Воскресенье'];
+const MONTHS_RU = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+const MONTHS_RU_GEN = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+
+// Demo "now" — fixed for prototype: Wed May 20 2026, 10:28
+const NOW = { day: 2, hour: 10 + 28/60 };
+const WEEK_DATES = [18, 19, 20, 21, 22, 23, 24]; // mon-sun
+
+// ============== SIDEBAR ==============
+// blocks + categories passed as props so useMemo reacts to live data changes
+function Sidebar({ blocks, categories, catFilters, setCatFilters, selectedDay, setSelectedDay, onOpenCategory }) {
+  // Mini-month for May 2026
+  const monthGrid = useMemo(() => {
+    // May 1 2026 is Friday; week starts Monday → 4 leading dim cells
+    const cells = [];
+    const dimBefore = 4;
+    const days = 31;
+    const totalCells = 42;
+    for (let i = 0; i < dimBefore; i++) cells.push({ d: 30 - dimBefore + i + 1, dim: true });
+    for (let i = 1; i <= days; i++) cells.push({ d: i, dim: false });
+    while (cells.length < totalCells) cells.push({ d: cells.length - dimBefore - days + 1, dim: true });
+    return cells;
+  }, []);
+
+  const toggleCat = (id) => {
+    const next = new Set(catFilters);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    setCatFilters(next);
+  };
+
+  // Count blocks per category — recomputes when blocks array changes
+  const counts = useMemo(() => {
+    const m = {};
+    blocks.forEach(b => { m[b.cat] = (m[b.cat] || 0) + 1; });
+    return m;
+  }, [blocks]);
+
+  return (
+    <aside className="sidebar">
+      <div>
+        <h2 className="side-section-title">Май · 2026</h2>
+        <div className="mini-month">
+          {['П','В','С','Ч','П','С','В'].map((d, i) => <div className="dow" key={i}>{d}</div>)}
+          {monthGrid.map((c, i) => {
+            if (c.dim) return <div key={i} className="day dim">{c.d}</div>;
+            const isToday = c.d === 20;
+            const isSel = WEEK_DATES.includes(c.d) && selectedDay === WEEK_DATES.indexOf(c.d);
+            return (
+              <button
+                key={i}
+                className={`day ${isToday ? 'today' : ''} ${isSel ? 'sel' : ''}`}
+                onClick={() => {
+                  const idx = WEEK_DATES.indexOf(c.d);
+                  if (idx >= 0) setSelectedDay(idx);
+                }}
+              >{c.d}</button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div>
+        <h2 className="side-section-title">Направления жизни</h2>
+        <div className="cat-list">
+          {categories.map(cat => {
+            const active = catFilters.has(cat.id);
+            return (
+              <div
+                key={cat.id}
+                className={`cat-row ${active ? '' : 'muted'}`}
+                style={tintStyle(cat.id)}
+                onClick={(e) => { e.stopPropagation(); toggleCat(cat.id); }}
+                onDoubleClick={() => onOpenCategory(cat.id)}
+              >
+                <span className="cat-dot" />
+                <span style={{ flex: 1 }}>{cat.nameRu}</span>
+                <span className="cat-count">{counts[cat.id] || 0}</span>
+              </div>
+            );
+          })}
+        </div>
+        <div style={{ marginTop: 10, fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--ink-3)', letterSpacing: '0.04em', padding: '6px 8px' }}>
+          dbl-click · открыть профиль
+        </div>
+      </div>
+
+      <div style={{ marginTop: 'auto' }}>
+        <h2 className="side-section-title">Быстро</h2>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <button className="cat-row" style={{ fontFamily: 'var(--font-mono)', fontSize: 12, letterSpacing: '0.04em' }}>
+            <kbd style={{ background: 'var(--bg-soft)', border: '1px solid var(--hairline)', borderRadius: 6, padding: '2px 6px', fontSize: 10 }}>⌘K</kbd>
+            <span>Quick add</span>
+          </button>
+          <button className="cat-row" style={{ fontFamily: 'var(--font-mono)', fontSize: 12, letterSpacing: '0.04em' }}>
+            <kbd style={{ background: 'var(--bg-soft)', border: '1px solid var(--hairline)', borderRadius: 6, padding: '2px 6px', fontSize: 10 }}>⌘F</kbd>
+            <span>Search life</span>
+          </button>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+// ============== TIME BLOCK ==============
+function TimeBlock({ block, hourPx = HOUR_PX, dayStart = DAY_START, onClick, compact = false, density = 'cozy' }) {
+  const cat = CAT_BY_ID[block.cat];
+  const top = (block.start - dayStart) * hourPx;
+  const height = Math.max((block.end - block.start) * hourPx - 2, 22);
+  return (
+    <button
+      className={`block ${compact ? 'compact' : ''} block-${density}`}
+      style={{
+        ...tintStyle(block.cat),
+        top, height,
+      }}
+      onClick={(e) => { e.stopPropagation(); onClick(block); }}
+    >
+      <div className="block-title">{block.title}</div>
+      {!compact && height > 36 && (
+        <div className="block-time">
+          {fmtH(block.start)}<span style={{ opacity: 0.5 }}>—</span>{fmtH(block.end)}
+          {block.recur && <span className="recur" style={{ marginLeft: 'auto' }}><Icon name="recur" size={11}/></span>}
+        </div>
+      )}
+    </button>
+  );
+}
+
+// ============== DAY VIEW ==============
+function DayView({ blocks, allDayItems, dayIndex, onOpenBlock }) {
+  const hours = [];
+  for (let h = DAY_START; h <= DAY_END; h++) hours.push(h);
+
+  const isToday = dayIndex === NOW.day;
+  const containerRef = useRef(null);
+
+  // Resolve overlap into columns
+  const laid = useMemo(() => layoutOverlaps(blocks), [blocks]);
+
+  // Scroll to ~now on mount
+  useEffect(() => {
+    if (containerRef.current && isToday) {
+      const targetY = (NOW.hour - DAY_START - 1) * HOUR_PX;
+      containerRef.current.scrollTop = Math.max(0, targetY);
+    }
+  }, [isToday]);
+
+  return (
+    <div className="dayview" ref={containerRef}>
+      <div className="hours-gutter" style={{ height: (DAY_END - DAY_START) * HOUR_PX + 24 }}>
+        {hours.map(h => (
+          <div key={h} className="hour-label" style={{ top: (h - DAY_START) * HOUR_PX }}>
+            {String(h).padStart(2, '0')}:00
+          </div>
+        ))}
+      </div>
+      <div className="day-canvas" style={{ height: (DAY_END - DAY_START) * HOUR_PX + 24, position: 'relative' }}>
+        {hours.map(h => (
+          <div key={h} className="day-grid-line" style={{ top: (h - DAY_START) * HOUR_PX }} />
+        ))}
+        {hours.slice(0, -1).map(h => (
+          <div key={`h${h}`} className="day-grid-line half" style={{ top: (h + 0.5 - DAY_START) * HOUR_PX }} />
+        ))}
+
+        {laid.map(({ block, col, cols }) => {
+          const cat = CAT_BY_ID[block.cat];
+          const top = (block.start - DAY_START) * HOUR_PX;
+          const height = Math.max((block.end - block.start) * HOUR_PX - 3, 24);
+          const widthPct = 100 / cols;
+          const leftPct = col * widthPct;
+          return (
+            <button
+              key={block.id}
+              className="block"
+              style={{
+                ...tintStyle(block.cat),
+                top, height,
+                left: `calc(${leftPct}% + 12px)`,
+                width: `calc(${widthPct}% - 16px)`,
+                right: 'auto',
+              }}
+              onClick={() => onOpenBlock(block)}
+              data-block-id={block.id}
+            >
+              <div className="block-title">{block.title}</div>
+              {height > 40 && (
+                <div className="block-time">
+                  {fmtH(block.start)} <span style={{ opacity: 0.5 }}>→</span> {fmtH(block.end)}
+                  {block.recur && <span className="recur" style={{ marginLeft: 'auto' }}><Icon name="recur" size={11}/></span>}
+                </div>
+              )}
+              {height > 80 && block.location && (
+                <div className="block-meta">
+                  <Icon name="pin" size={11}/>{block.location}
+                </div>
+              )}
+              {height > 110 && block.checklist && (
+                <div className="block-meta">
+                  <Icon name="check" size={11}/>{block.checklist.length} пунктов
+                </div>
+              )}
+            </button>
+          );
+        })}
+
+        {isToday && (
+          <div className="now-bar" style={{ top: (NOW.hour - DAY_START) * HOUR_PX }}>
+            <span className="now-label">{fmtH(NOW.hour)}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Greedy column packing for overlapping blocks
+function layoutOverlaps(blocks) {
+  const sorted = [...blocks].sort((a, b) => a.start - b.start || b.end - b.start - (a.end - a.start));
+  const cols = []; // cols[i] = last end time
+  const placed = [];
+  for (const b of sorted) {
+    let placedCol = -1;
+    for (let i = 0; i < cols.length; i++) {
+      if (cols[i] <= b.start) { placedCol = i; break; }
+    }
+    if (placedCol === -1) { cols.push(b.end); placedCol = cols.length - 1; }
+    else cols[placedCol] = b.end;
+    placed.push({ block: b, col: placedCol });
+  }
+  // For each block, determine the total parallel cols at that time
+  return placed.map(({ block, col }) => {
+    const parallel = placed.filter(p => p.block.start < block.end && p.block.end > block.start);
+    const maxCol = Math.max(...parallel.map(p => p.col));
+    return { block, col, cols: maxCol + 1 };
+  });
+}
+
+// ============== WEEK VIEW ==============
+// blocks passed as prop so colDensity and rendering react to live data changes
+function WeekView({ blocks, onOpenBlock, density, onSelectDay }) {
+  const hours = [];
+  for (let h = DAY_START; h <= DAY_END; h++) hours.push(h);
+
+  // Categorical density per day — recomputes when blocks changes
+  const colDensity = useMemo(() => {
+    const out = WEEK_DATES.map(() => ({}));
+    blocks.forEach(b => {
+      if (b.day >= 0 && b.day < WEEK_DATES.length) {
+        out[b.day][b.cat] = (out[b.day][b.cat] || 0) + (b.end - b.start);
+      }
+    });
+    return out;
+  }, [blocks]);
+
+  return (
+    <div className="weekview">
+      <div className="hours-gutter" style={{ paddingTop: 88, position: 'relative' }}>
+        {hours.map(h => (
+          <div key={h} className="hour-label" style={{ top: 88 + (h - DAY_START) * HOUR_PX }}>
+            {String(h).padStart(2, '0')}:00
+          </div>
+        ))}
+      </div>
+
+      <div className="weekgrid">
+        <div className="week-heads">
+          {WEEK_DATES.map((date, i) => (
+            <div key={i} className={`week-head ${i === NOW.day ? 'today' : ''}`} onClick={() => onSelectDay && onSelectDay(i)}>
+              <div className="dow">{DOW_SHORT[i]}</div>
+              <div className="dom">{date}</div>
+              <div className="density-bar">
+                {Object.entries(colDensity[i]).map(([cat, h]) => (
+                  <span key={cat} style={{ '--seg': `var(--c-${cat}-bar)`, flex: h }} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="week-cols">
+          {WEEK_DATES.map((date, dayIdx) => {
+            const dayBlocks = blocks.filter(b => b.day === dayIdx);
+            const laid = layoutOverlaps(dayBlocks);
+            return (
+              <div key={dayIdx} className={`week-col ${dayIdx === NOW.day ? 'today' : ''}`} style={{ height: (DAY_END - DAY_START) * HOUR_PX + 24 }}>
+                {hours.map(h => (
+                  <div key={h} className="day-grid-line" style={{ top: (h - DAY_START) * HOUR_PX }} />
+                ))}
+                {laid.map(({ block, col, cols }) => {
+                  const top = (block.start - DAY_START) * HOUR_PX;
+                  const height = Math.max((block.end - block.start) * HOUR_PX - 2, 18);
+                  const widthPct = 100 / cols;
+                  return (
+                    <button
+                      key={block.id}
+                      className="block"
+                      style={{
+                        ...tintStyle(block.cat),
+                        top, height,
+                        left: `calc(${col * widthPct}% + 3px)`,
+                        width: `calc(${widthPct}% - 6px)`,
+                        right: 'auto',
+                      }}
+                      onClick={() => onOpenBlock(block)}
+                      data-block-id={block.id}
+                    >
+                      <div className="block-title" style={{ fontSize: 11.5 }}>{block.title}</div>
+                      {height > 28 && (
+                        <div className="block-time" style={{ fontSize: 9.5 }}>{fmtH(block.start)}</div>
+                      )}
+                    </button>
+                  );
+                })}
+                {dayIdx === NOW.day && (
+                  <div className="now-bar" style={{ top: (NOW.hour - DAY_START) * HOUR_PX, left: 0 }}>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============== DAILY SUMMARY ==============
+function DailySummary({ dayIndex, onOpenOverview }) {
+  const dayBlocks = WEEK_BLOCKS.filter(b => b.day === dayIndex);
+  const allDay = ALL_DAY.filter(a => a.day === dayIndex);
+  const tasks = allDay.filter(a => a.type === 'task').length;
+  const reminders = allDay.filter(a => a.type === 'reminder').length;
+  const overdue = dayIndex === NOW.day ? 1 : 0;
+  const totalHrs = dayBlocks.reduce((s, b) => s + (b.end - b.start), 0);
+
+  return (
+    <div className="summary">
+      <button className="sum-chip" onClick={onOpenOverview}>
+        <span className="sum-num">{dayBlocks.length}</span>
+        <span>тайм-блоков</span>
+        <span style={{ color: 'var(--ink-3)', fontFamily: 'var(--font-mono)', fontSize: 11 }}>· {totalHrs.toFixed(1)} ч</span>
+      </button>
+      <button className="sum-chip">
+        <span className="sum-num">{tasks}</span>
+        <span>задач</span>
+      </button>
+      <button className="sum-chip">
+        <span className="sum-num">{reminders}</span>
+        <span>напомнить</span>
+      </button>
+      {overdue > 0 && (
+        <button className="sum-chip alert">
+          <span className="sum-num">{overdue}</span>
+          <span>просрочено</span>
+        </button>
+      )}
+    </div>
+  );
+}
+
+window.LIFEOS_VIEWS = { Sidebar, DayView, WeekView, DailySummary, Icon, fmtH, DOW_FULL, MONTHS_RU, MONTHS_RU_GEN, WEEK_DATES, NOW, HOUR_PX, DAY_START, DAY_END, layoutOverlaps };
+
+</script>
+
+<script type="text/babel">
+/* eslint-disable */
+// LIFEOS — overlays.jsx
+// L1 Time Block modal + L2 Category Profile (signature expanding animation).
+// Quick Add sheet + Global Search modal + Day Overview sheet.
+//
+// STORAGE: QuickAdd saves to IndexedDB. BlockOverlay loads/saves checklist.
+
+const { useState: useStateO, useEffect: useEffectO, useRef: useRefO, useMemo: useMemoO } = React;
+const VIEWS = window.LIFEOS_VIEWS;
+const DATA = window.LIFEOS_DATA;
+const { Icon, fmtH } = VIEWS;
+// NOTE: CATEGORIES, CAT_BY_ID, WEEK_BLOCKS are read from DATA at render time
+// (via DATA.CATEGORIES etc.) so they always reflect the latest spliced arrays.
+const { tintStyle } = DATA;
+
+// ============== L1 + L2 SHARED CARD ==============
+function BlockOverlay({ block, onClose, initialPhase = 'l1' }) {
+  const [phase, setPhase] = useStateO(initialPhase);
+  const [closing, setClosing] = useStateO(false);
+  const [checkedItems, setCheckedItems] = useStateO(new Set());
+  const [checklistLoaded, setChecklistLoaded] = useStateO(false);
+
+  const cat = DATA.CAT_BY_ID[block.cat];
+
+  // Load persisted checklist state from IndexedDB
+  useEffectO(() => {
+    if (!window.LIFEOS_DB || !block.id) return;
+    window.LIFEOS_DB.loadChecklistState(block.id).then(saved => {
+      setCheckedItems(saved);
+      setChecklistLoaded(true);
+    });
+  }, [block.id]);
+
+  const close = () => {
+    setClosing(true);
+    setTimeout(onClose, 320);
+  };
+
+  useEffectO(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        if (phase === 'l2') setPhase('l1');
+        else close();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [phase]);
+
+  const goalProgress = cat.goals.reduce((s, g) => s + g.progress, 0) / cat.goals.length;
+
+  const toggleCheck = async (i) => {
+    const next = new Set(checkedItems);
+    if (next.has(i)) next.delete(i); else next.add(i);
+    setCheckedItems(next);
+    // Persist to DB (fire-and-forget, no reload needed)
+    if (window.LIFEOS_DB) {
+      window.LIFEOS_DB.saveChecklistState(block.id, next);
+    }
+  };
+
+  const cardStyle = phase === 'l2'
+    ? { left: '0', top: '0', right: '0', bottom: '0', width: '100%', height: '100%', borderRadius: 0, border: 'none' }
+    : { left: '50%', top: '50%', width: 'min(640px, 90vw)', height: 'min(820px, 88vh)', transform: 'translate(-50%, -50%)', borderRadius: 'var(--r-lg)' };
+
+  return (
+    <>
+      <div className="scrim" onClick={close} style={{ opacity: closing ? 0 : undefined, transition: 'opacity 280ms var(--ease)' }} />
+      <div
+        className={`l1-l2-card ${phase} ${closing ? 'closing' : ''}`}
+        style={{
+          ...tintStyle(block.cat),
+          position: 'fixed',
+          zIndex: 65,
+          background: 'var(--bg)',
+          boxShadow: 'var(--shadow-modal)',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          transition: 'all 520ms var(--ease)',
+          opacity: closing ? 0 : 1,
+          ...cardStyle,
+        }}
+      >
+        <SharedHero block={block} cat={cat} phase={phase} onBack={() => setPhase('l1')} onClose={close} goalProgress={goalProgress} />
+
+        <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+          <div style={{
+            position: 'absolute', inset: 0,
+            opacity: phase === 'l1' ? 1 : 0,
+            transform: phase === 'l1' ? 'translateY(0)' : 'translateY(-12px)',
+            transition: 'opacity 220ms var(--ease), transform 320ms var(--ease)',
+            pointerEvents: phase === 'l1' ? 'auto' : 'none',
+            overflowY: 'auto',
+          }}>
+            <L1Body block={block} cat={cat} checkedItems={checkedItems} toggleCheck={toggleCheck} onOpenContext={() => setPhase('l2')} />
+          </div>
+          <div style={{
+            position: 'absolute', inset: 0,
+            opacity: phase === 'l2' ? 1 : 0,
+            transform: phase === 'l2' ? 'translateY(0)' : 'translateY(12px)',
+            transition: 'opacity 320ms 120ms var(--ease), transform 520ms var(--ease)',
+            pointerEvents: phase === 'l2' ? 'auto' : 'none',
+            overflowY: 'auto',
+          }}>
+            <L2Body cat={cat} block={block} />
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ============== SHARED HERO ==============
+function SharedHero({ block, cat, phase, onBack, onClose, goalProgress }) {
+  const isL2 = phase === 'l2';
+
+  return (
+    <div style={{
+      background: 'oklch(var(--tint))',
+      position: 'relative',
+      flexShrink: 0,
+      padding: isL2 ? '36px 48px 28px' : '22px 24px 18px',
+      transition: 'padding 520ms var(--ease)',
+    }}>
+      <div style={{
+        position: 'absolute', left: 0, top: 0, bottom: 0,
+        width: isL2 ? 6 : 4,
+        background: 'oklch(var(--tint-bar))',
+        transition: 'width 520ms var(--ease)',
+      }} />
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isL2 ? 22 : 14, transition: 'margin 520ms var(--ease)' }}>
+        {isL2 ? (
+          <button className="l2-back" onClick={onBack} style={{ background: 'oklch(var(--tint-ink) / 0.08)', color: 'oklch(var(--tint-ink))' }}>
+            <Icon name="chevron-l" size={16}/>
+            <span>{block.title}</span>
+          </button>
+        ) : (
+          <div className="l1-cat-badge">
+            <span className="lb-dot"/>{cat.name}
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: 8 }}>
+          {isL2 && <button className="icon-btn" style={{ background: 'oklch(var(--tint-ink) / 0.06)', borderColor: 'transparent', color: 'oklch(var(--tint-ink))' }}><Icon name="sparkles" size={16}/></button>}
+          {isL2 && <button className="icon-btn" style={{ background: 'oklch(var(--tint-ink) / 0.06)', borderColor: 'transparent', color: 'oklch(var(--tint-ink))' }}><Icon name="attach" size={16}/></button>}
+          <button className="icon-btn" onClick={onClose} style={{ background: 'oklch(var(--tint-ink) / 0.06)', borderColor: 'transparent', color: 'oklch(var(--tint-ink))' }}>
+            <Icon name="close" size={16}/>
+          </button>
+        </div>
+      </div>
+
+      {isL2 ? (
+        <>
+          <div className="l2-cat-line">
+            <span className="lc-dot"/>{cat.nameRu} · life area
+          </div>
+          <h1 className="l2-title" style={{ fontSize: 'clamp(48px, 7vw, 72px)' }}>
+            {cat.nameRu}
+            <span className="l2-title-sub">{cat.name}</span>
+          </h1>
+          <p className="l2-tagline">{cat.tagline}</p>
+          <div className="l2-stats">
+            <div className="l2-stat"><span className="num">{cat.goals.length}</span><span className="lbl">целей</span></div>
+            <div className="l2-stat"><span className="num">{Math.round(goalProgress)}%</span><span className="lbl">средний прогресс</span></div>
+            <div className="l2-stat"><span className="num">{DATA.WEEK_BLOCKS.filter(b => b.cat === cat.id).length}</span><span className="lbl">блоков · неделя</span></div>
+            <div className="l2-stat"><span className="num">{cat.links.length}</span><span className="lbl">материалов</span></div>
+          </div>
+        </>
+      ) : (
+        <>
+          <h1 className="l1-title" style={{ fontSize: 32 }}>{block.title}</h1>
+          <div className="l1-time">
+            <Icon name="clock" size={14}/>
+            <span>{fmtH(block.start)} — {fmtH(block.end)}</span>
+            {block.recur && <><span style={{ opacity: 0.4 }}>·</span><Icon name="recur" size={12}/><span>повторение</span></>}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ============== L1 BODY ==============
+function L1Body({ block, cat, checkedItems, toggleCheck, onOpenContext }) {
+  return (
+    <div style={{ padding: '20px 24px 24px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+      {block.location && (
+        <div className="l1-row">
+          <div className="l1-label">Место</div>
+          <div className="l1-val"><span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Icon name="pin" size={14}/>{block.location}</span></div>
+        </div>
+      )}
+
+      {block.notes && (
+        <div className="l1-row">
+          <div className="l1-label">Заметка</div>
+          <div className="l1-val muted">{block.notes}</div>
+        </div>
+      )}
+
+      {block.checklist && (
+        <div className="l1-row">
+          <div className="l1-label">Чек-лист</div>
+          <div className="l1-val" style={{ width: '100%' }}>
+            <div className="checklist">
+              {block.checklist.map((item, i) => {
+                const done = checkedItems.has(i);
+                return (
+                  <div key={i} className={`check-item ${done ? 'done' : ''}`} onClick={() => toggleCheck(i)}>
+                    <div className="check-box">{done && <Icon name="check" size={12}/>}</div>
+                    <div className="check-text">{item}</div>
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--ink-3)', marginTop: 8, letterSpacing: '0.04em' }}>
+              {checkedItems.size} / {block.checklist.length} выполнено
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="l1-row">
+        <div className="l1-label">Напомнить</div>
+        <div className="l1-val">
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <Icon name="bell" size={14}/>За 10 минут до начала
+          </span>
+        </div>
+      </div>
+
+      <div className="l1-context-cta" onClick={onOpenContext} style={{ marginTop: 8 }}>
+        <div>
+          <div className="label-mono">второй уровень · life area</div>
+          <div className="cta-title">
+            <span style={{ width: 10, height: 10, borderRadius: 3, background: 'oklch(var(--tint-bar))' }}/>
+            Открыть контекст «{cat.nameRu}»
+          </div>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--ink-3)', marginTop: 4, letterSpacing: '0.02em' }}>
+            {cat.goals.length} целей · {cat.links.length} материалов · история событий
+          </div>
+        </div>
+        <div className="cta-arrow"><Icon name="arrow-r" size={20}/></div>
+      </div>
+    </div>
+  );
+}
+
+// ============== L2 BODY ==============
+function L2Body({ cat, block }) {
+  return (
+    <div className="l2-body">
+      {/* Goals */}
+      <div className="l2-block">
+        <div className="l2-block-head">
+          <h3>Цели направления</h3>
+          <span className="count-mono">{cat.goals.length} активных</span>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {cat.goals.map(g => (
+            <div key={g.id} className="goal-item">
+              <div className="goal-row1">
+                <div className="goal-title">{g.title}</div>
+                <div className="goal-due">{g.due}</div>
+              </div>
+              <div className="goal-progress"><span style={{ width: `${g.progress}%` }}/></div>
+              <div className="goal-meta">
+                <span>{g.owner}</span>
+                <span style={{ color: 'var(--ink)' }}>{g.progress}%</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Notes */}
+      <div className="l2-block">
+        <div className="l2-block-head">
+          <h3>Заметка направления</h3>
+          <span className="count-mono">обновлено вчера</span>
+        </div>
+        <div className="notes-card">{cat.notes}</div>
+        <div className="l2-block-head" style={{ marginTop: 16 }}>
+          <h3>Материалы и ссылки</h3>
+          <span className="count-mono">{cat.links.length}</span>
+        </div>
+        <div className="linked-grid">
+          {cat.links.map(l => (
+            <div key={l.id} className="link-pill">
+              <div className="lp-icon"><Icon name="attach" size={12}/></div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.title}</div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--ink-3)', letterSpacing: '0.02em' }}>{l.meta}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Activity history */}
+      <div className="l2-block full">
+        <div className="l2-block-head">
+          <h3>Активность · последние 12 недель</h3>
+          <span className="count-mono">часов в неделю</span>
+        </div>
+        <div className="history-strip">
+          {cat.history.map((v, i) => {
+            const max = Math.max(...cat.history);
+            return (
+              <div
+                key={i}
+                className={`hs-bar ${i === cat.history.length - 1 ? 'active' : ''}`}
+                style={{ height: `${(v / max) * 100}%` }}
+                title={`Неделя ${i+1}: ${v} ч`}
+              />
+            );
+          })}
+        </div>
+        <div className="hs-labels">
+          <span>12 нед. назад</span><span>9 нед.</span><span>6 нед.</span><span>3 нед.</span><span>текущая</span>
+        </div>
+      </div>
+
+      {/* Related blocks (this week) — reads from DATA.WEEK_BLOCKS which is kept in sync */}
+      <div className="l2-block full">
+        <div className="l2-block-head">
+          <h3>Связанные блоки · текущая неделя</h3>
+          <span className="count-mono">{DATA.WEEK_BLOCKS.filter(b => b.cat === cat.id).length}</span>
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {DATA.WEEK_BLOCKS.filter(b => b.cat === cat.id).map(b => (
+            <div key={b.id} className="allday-chip" style={tintStyle(b.cat)}>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, opacity: 0.7 }}>{VIEWS.DOW_FULL[b.day].slice(0,2)}</span>
+              <span>{b.title}</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, opacity: 0.7 }}>{fmtH(b.start)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============== SEARCH ==============
+function SearchModal({ onClose, onOpenBlock, onOpenCategory }) {
+  const [q, setQ] = useStateO('');
+  const inputRef = useRefO(null);
+  useEffectO(() => { inputRef.current?.focus(); }, []);
+  useEffectO(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // Use DATA refs directly so results reflect live data (WEEK_BLOCKS is spliced in-place)
+  const results = useMemoO(() => {
+    const norm = q.trim().toLowerCase();
+    const CATEGORIES  = DATA.CATEGORIES;
+    const CAT_BY_ID   = DATA.CAT_BY_ID;
+    const WEEK_BLOCKS = DATA.WEEK_BLOCKS;
+    const blocks = WEEK_BLOCKS.filter(b => !norm || b.title.toLowerCase().includes(norm) || (b.notes && b.notes.toLowerCase().includes(norm)));
+    const cats   = CATEGORIES.filter(c => !norm || c.nameRu.toLowerCase().includes(norm) || c.name.toLowerCase().includes(norm) || c.tagline.toLowerCase().includes(norm));
+    const goals  = CATEGORIES.flatMap(c => c.goals.map(g => ({ ...g, catId: c.id, catName: c.nameRu }))).filter(g => !norm || g.title.toLowerCase().includes(norm));
+    const notes  = CATEGORIES.filter(c => !norm || (c.notes && c.notes.toLowerCase().includes(norm)));
+    return { blocks: blocks.slice(0, 6), cats: cats.slice(0, 4), goals: goals.slice(0, 4), notes: notes.slice(0, 3) };
+  }, [q]);
+
+  return (
+    <>
+      <div className="scrim" onClick={onClose}/>
+      <div className="sheet entering" style={{ left: '50%', top: '12%', transform: 'translateX(-50%)', width: 'min(720px, 92vw)', maxHeight: '76vh' }}>
+        <div className="search-input-row">
+          <Icon name="search" size={20}/>
+          <input
+            ref={inputRef}
+            className="search-input"
+            placeholder="Поиск по жизни: блоки, заметки, цели, направления…"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+          <span className="search-kbd">esc</span>
+        </div>
+        <div className="search-results">
+          {results.blocks.length > 0 && (
+            <>
+              <div className="search-group-title">Тайм-блоки · {results.blocks.length}</div>
+              {results.blocks.map(b => {
+                const c = DATA.CAT_BY_ID[b.cat];
+                return (
+                  <div key={b.id} className="search-row" style={tintStyle(b.cat)} onClick={() => { onOpenBlock(b); onClose(); }}>
+                    <div className="sr-icon"><Icon name="clock" size={16}/></div>
+                    <div className="sr-main">
+                      <div className="sr-title">{b.title}</div>
+                      <div className="sr-sub">{VIEWS.DOW_FULL[b.day]} · {fmtH(b.start)} — {fmtH(b.end)} · {c.nameRu}</div>
+                    </div>
+                    <Icon name="chevron-r" size={14}/>
+                  </div>
+                );
+              })}
+            </>
+          )}
+          {results.cats.length > 0 && (
+            <>
+              <div className="search-group-title">Направления</div>
+              {results.cats.map(c => (
+                <div key={c.id} className="search-row" style={tintStyle(c.id)} onClick={() => { onOpenCategory(c.id); onClose(); }}>
+                  <div className="sr-icon"><Icon name={c.icon} size={16}/></div>
+                  <div className="sr-main">
+                    <div className="sr-title">{c.nameRu} <span style={{ color: 'var(--ink-3)', fontFamily: 'var(--font-mono)', fontSize: 11, marginLeft: 6 }}>{c.name}</span></div>
+                    <div className="sr-sub">{c.tagline}</div>
+                  </div>
+                  <Icon name="chevron-r" size={14}/>
+                </div>
+              ))}
+            </>
+          )}
+          {results.goals.length > 0 && (
+            <>
+              <div className="search-group-title">Цели</div>
+              {results.goals.map(g => (
+                <div key={g.id} className="search-row" style={tintStyle(g.catId)} onClick={() => { onOpenCategory(g.catId); onClose(); }}>
+                  <div className="sr-icon"><Icon name="flag" size={16}/></div>
+                  <div className="sr-main">
+                    <div className="sr-title">{g.title}</div>
+                    <div className="sr-sub">{g.catName} · {g.due} · {g.progress}%</div>
+                  </div>
+                  <Icon name="chevron-r" size={14}/>
+                </div>
+              ))}
+            </>
+          )}
+          {results.notes.length > 0 && (
+            <>
+              <div className="search-group-title">Заметки направлений</div>
+              {results.notes.map(c => (
+                <div key={c.id} className="search-row" style={tintStyle(c.id)} onClick={() => { onOpenCategory(c.id); onClose(); }}>
+                  <div className="sr-icon"><Icon name="note" size={16}/></div>
+                  <div className="sr-main">
+                    <div className="sr-title">{c.nameRu} · заметка</div>
+                    <div className="sr-sub" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 460 }}>{c.notes}</div>
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+          {results.blocks.length === 0 && results.cats.length === 0 && results.goals.length === 0 && q.trim() && (
+            <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--ink-3)', fontFamily: 'var(--font-mono)', fontSize: 12 }}>
+              Ничего не найдено по «{q}»
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ============== QUICK ADD ==============
+// Now actually saves to IndexedDB. Requires props: currentDay, onBlockSaved.
+function QuickAdd({ onClose, onBlockSaved, currentDay = 0, defaultCatId = 'business' }) {
+  const [tab, setTab] = useStateO('block');      // 'block' | 'task' | 'reminder'
+  const [cat, setCat] = useStateO(defaultCatId);
+  const [title, setTitle] = useStateO('');
+  const [startH, setStartH] = useStateO(9);
+  const [startM, setStartM] = useStateO(0);
+  const [endH, setEndH] = useStateO(10);
+  const [endM, setEndM] = useStateO(0);
+  const [saving, setSaving] = useStateO(false);
+  const inputRef = useRefO(null);
+
+  useEffectO(() => { inputRef.current?.focus(); }, []);
+  useEffectO(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  const handleCreate = async () => {
+    const trimmed = title.trim();
+    if (!trimmed) { inputRef.current?.focus(); return; }
+    setSaving(true);
+    try {
+      if (tab === 'block') {
+        const start = startH + startM / 60;
+        const end   = endH   + endM   / 60;
+        const newBlock = {
+          id:    'user_' + Date.now(),
+          day:   currentDay,
+          start: start,
+          end:   end > start ? end : start + 1,
+          title: trimmed,
+          cat:   cat,
+        };
+        await window.LIFEOS_DB.saveBlock(newBlock);
+      } else {
+        const newItem = {
+          id:    'allday_' + Date.now(),
+          day:   currentDay,
+          title: trimmed,
+          cat:   cat,
+          type:  tab,  // 'task' | 'reminder'
+        };
+        await window.LIFEOS_DB.saveAllDay(newItem);
+      }
+      if (onBlockSaved) onBlockSaved();
+    } catch(e) {
+      console.error('[LIFEOS] QuickAdd save failed:', e);
+    }
+    onClose();
+  };
+
+  const handleKey = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleCreate(); }
+  };
+
+  const DOW_SHORT = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+
+  return (
+    <>
+      <div className="scrim" onClick={onClose}/>
+      <div className="sheet entering" style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'min(560px, 92vw)' }}>
+        <div style={{ padding: '20px 22px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--ink-3)' }}>
+            {DOW_SHORT[currentDay]} · Быстро · что создать
+          </div>
+          <button className="icon-btn" onClick={onClose}><Icon name="close" size={16}/></button>
+        </div>
+
+        <div className="qa-tabs">
+          <button aria-pressed={tab === 'block'}    onClick={() => setTab('block')}>Тайм-блок</button>
+          <button aria-pressed={tab === 'task'}     onClick={() => setTab('task')}>Задача</button>
+          <button aria-pressed={tab === 'reminder'} onClick={() => setTab('reminder')}>Напоминание</button>
+        </div>
+
+        <div className="qa-form">
+          <input
+            ref={inputRef}
+            autoFocus
+            className="qa-title-input"
+            placeholder={tab === 'block' ? 'Название тайм-блока' : tab === 'task' ? 'Что нужно сделать?' : 'О чём напомнить?'}
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onKeyDown={handleKey}
+          />
+
+          {tab === 'block' && (
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              {/* Start time */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--ink-3)' }}>с</span>
+                <select
+                  className="qa-time-select"
+                  value={startH}
+                  onChange={e => {
+                    const h = Number(e.target.value);
+                    setStartH(h);
+                    if (h >= endH) setEndH(h + 1);
+                  }}
+                  style={timeSelectStyle}
+                >
+                  {Array.from({length: 18}, (_, i) => i + 6).map(h => (
+                    <option key={h} value={h}>{String(h).padStart(2,'0')}:00</option>
+                  ))}
+                </select>
+              </div>
+              {/* End time */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--ink-3)' }}>до</span>
+                <select
+                  className="qa-time-select"
+                  value={endH}
+                  onChange={e => setEndH(Number(e.target.value))}
+                  style={timeSelectStyle}
+                >
+                  {Array.from({length: 18}, (_, i) => i + 7).map(h => (
+                    <option key={h} value={h} disabled={h <= startH}>{String(h).padStart(2,'0')}:00</option>
+                  ))}
+                </select>
+              </div>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--ink-3)', marginLeft: 2 }}>
+                · {endH - startH} ч
+              </span>
+            </div>
+          )}
+
+          <div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--ink-3)', marginBottom: 8 }}>Направление</div>
+            <div className="qa-cat-picker">
+              {DATA.CATEGORIES.map(c => (
+                <button
+                  key={c.id}
+                  className="qa-cat-chip"
+                  style={tintStyle(c.id)}
+                  aria-pressed={cat === c.id}
+                  onClick={() => setCat(c.id)}
+                >
+                  <span className="qcc-dot"/>{c.nameRu}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="qa-actions">
+            <button className="btn ghost" onClick={onClose}>Отмена</button>
+            <button
+              className="btn solid"
+              onClick={handleCreate}
+              disabled={saving || !title.trim()}
+              style={{ opacity: (!title.trim() || saving) ? 0.5 : 1 }}
+            >
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                {saving ? 'Сохраняю…' : 'Создать'}
+                {!saving && <kbd style={{ fontFamily: 'var(--font-mono)', fontSize: 10, opacity: 0.6 }}>⏎</kbd>}
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+const timeSelectStyle = {
+  fontFamily: 'var(--font-mono)',
+  fontSize: 12,
+  border: '1px solid var(--hairline)',
+  borderRadius: 6,
+  padding: '3px 6px',
+  background: 'var(--bg-soft)',
+  color: 'var(--ink)',
+  cursor: 'pointer',
+};
+
+// ============== DAY OVERVIEW SHEET ==============
+function DayOverview({ dayIndex, onClose, onOpenBlock }) {
+  const blocks = DATA.WEEK_BLOCKS.filter(b => b.day === dayIndex).sort((a, b) => a.start - b.start);
+  const totals = {};
+  blocks.forEach(b => { totals[b.cat] = (totals[b.cat] || 0) + (b.end - b.start); });
+  const totalHrs = blocks.reduce((s, b) => s + (b.end - b.start), 0);
+  useEffectO(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  const date = VIEWS.WEEK_DATES[dayIndex];
+  const dow  = VIEWS.DOW_FULL[dayIndex];
+
+  return (
+    <>
+      <div className="scrim" onClick={onClose}/>
+      <div className="sheet entering" style={{ left: '50%', top: '8%', transform: 'translateX(-50%)', width: 'min(560px, 92vw)', maxHeight: '84vh' }}>
+        <div style={{ padding: '22px 24px 14px', borderBottom: '1px solid var(--hairline)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--ink-3)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{dow}</div>
+              <div style={{ fontSize: 42, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, marginTop: 4 }}>{date} {VIEWS.MONTHS_RU_GEN[4]}</div>
+            </div>
+            <button className="icon-btn" onClick={onClose}><Icon name="close" size={16}/></button>
+          </div>
+
+          <div style={{ display: 'flex', gap: 24, marginTop: 18 }}>
+            <div><div style={{ fontSize: 28, fontWeight: 600, fontFeatureSettings: '"tnum"' }}>{blocks.length}</div><div style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--ink-3)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>блоков</div></div>
+            <div><div style={{ fontSize: 28, fontWeight: 600, fontFeatureSettings: '"tnum"' }}>{totalHrs.toFixed(1)}</div><div style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--ink-3)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>часов</div></div>
+            <div><div style={{ fontSize: 28, fontWeight: 600, fontFeatureSettings: '"tnum"' }}>{(24 - totalHrs).toFixed(1)}</div><div style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--ink-3)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>свободно</div></div>
+          </div>
+
+          <div style={{ marginTop: 16, height: 8, background: 'var(--hairline-2)', borderRadius: 4, display: 'flex', overflow: 'hidden' }}>
+            {Object.entries(totals).map(([cat, h]) => (
+              <div key={cat} style={{ background: `oklch(var(--c-${cat}-bar))`, flex: h, height: '100%' }} title={`${DATA.CAT_BY_ID[cat].nameRu}: ${h} ч`}/>
+            ))}
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+            {Object.entries(totals).sort((a,b) => b[1]-a[1]).map(([cat, h]) => (
+              <div key={cat} style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ width: 8, height: 8, borderRadius: 2, background: `oklch(var(--c-${cat}-bar))` }}/>
+                {DATA.CAT_BY_ID[cat].nameRu} · {h} ч
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ overflowY: 'auto', padding: '8px 0' }}>
+          {blocks.map(b => (
+            <div key={b.id} className="search-row" style={tintStyle(b.cat)} onClick={() => { onOpenBlock(b); onClose(); }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--ink-3)', width: 56, flexShrink: 0 }}>{fmtH(b.start)}</div>
+              <div style={{ width: 3, alignSelf: 'stretch', background: 'oklch(var(--tint-bar))', borderRadius: 2 }}/>
+              <div className="sr-main">
+                <div className="sr-title">{b.title}</div>
+                <div className="sr-sub">{fmtH(b.start)} — {fmtH(b.end)} · {DATA.CAT_BY_ID[b.cat].nameRu}</div>
+              </div>
+              {b.recur && <Icon name="recur" size={14}/>}
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
+
+// Open Category profile directly (without going through a block)
+function CategoryProfileDirect({ catId, onClose }) {
+  const cat = DATA.CAT_BY_ID[catId];
+  const stubBlock = { id: 'stub', title: cat.nameRu, cat: catId, start: 0, end: 0 };
+  return <BlockOverlay block={stubBlock} onClose={onClose} initialPhase="l2" />;
+}
+
+window.LIFEOS_OVERLAYS = { BlockOverlay, SearchModal, QuickAdd, DayOverview, CategoryProfileDirect };
+
+</script>
+
+<script type="text/babel">
+
+// tweaks-panel.jsx
+// Reusable Tweaks shell + form-control helpers.
+//
+// Owns the host protocol (listens for __activate_edit_mode / __deactivate_edit_mode,
+// posts __edit_mode_available / __edit_mode_set_keys / __edit_mode_dismissed) so
+// individual prototypes don't re-roll it. Ships a consistent set of controls so you
+// don't hand-draw <input type="range">, segmented radios, steppers, etc.
+//
+// Usage (in an HTML file that loads React + Babel):
+//
+//   const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+//     "primaryColor": "#D97757",
+//     "palette": ["#D97757", "#29261b", "#f6f4ef"],
+//     "fontSize": 16,
+//     "density": "regular",
+//     "dark": false
+//   }/*EDITMODE-END*/;
+//
+//   function App() {
+//     const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+//     return (
+//       <div style={{ fontSize: t.fontSize, color: t.primaryColor }}>
+//         Hello
+//         <TweaksPanel>
+//           <TweakSection label="Typography" />
+//           <TweakSlider label="Font size" value={t.fontSize} min={10} max={32} unit="px"
+//                        onChange={(v) => setTweak('fontSize', v)} />
+//           <TweakRadio  label="Density" value={t.density}
+//                        options={['compact', 'regular', 'comfy']}
+//                        onChange={(v) => setTweak('density', v)} />
+//           <TweakSection label="Theme" />
+//           <TweakColor  label="Primary" value={t.primaryColor}
+//                        options={['#D97757', '#2A6FDB', '#1F8A5B', '#7A5AE0']}
+//                        onChange={(v) => setTweak('primaryColor', v)} />
+//           <TweakColor  label="Palette" value={t.palette}
+//                        options={[['#D97757', '#29261b', '#f6f4ef'],
+//                                  ['#475569', '#0f172a', '#f1f5f9']]}
+//                        onChange={(v) => setTweak('palette', v)} />
+//           <TweakToggle label="Dark mode" value={t.dark}
+//                        onChange={(v) => setTweak('dark', v)} />
+//         </TweaksPanel>
+//       </div>
+//     );
+//   }
+//
+// ─────────────────────────────────────────────────────────────────────────────
+
+const __TWEAKS_STYLE = `
+  .twk-panel{position:fixed;right:16px;bottom:16px;z-index:2147483646;width:280px;
+    max-height:calc(100vh - 32px);display:flex;flex-direction:column;
+    transform:scale(var(--dc-inv-zoom,1));transform-origin:bottom right;
+    background:rgba(250,249,247,.78);color:#29261b;
+    -webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%);
+    border:.5px solid rgba(255,255,255,.6);border-radius:14px;
+    box-shadow:0 1px 0 rgba(255,255,255,.5) inset,0 12px 40px rgba(0,0,0,.18);
+    font:11.5px/1.4 ui-sans-serif,system-ui,-apple-system,sans-serif;overflow:hidden}
+  .twk-hd{display:flex;align-items:center;justify-content:space-between;
+    padding:10px 8px 10px 14px;cursor:move;user-select:none}
+  .twk-hd b{font-size:12px;font-weight:600;letter-spacing:.01em}
+  .twk-x{appearance:none;border:0;background:transparent;color:rgba(41,38,27,.55);
+    width:22px;height:22px;border-radius:6px;cursor:default;font-size:13px;line-height:1}
+  .twk-x:hover{background:rgba(0,0,0,.06);color:#29261b}
+  .twk-body{padding:2px 14px 14px;display:flex;flex-direction:column;gap:10px;
+    overflow-y:auto;overflow-x:hidden;min-height:0;
+    scrollbar-width:thin;scrollbar-color:rgba(0,0,0,.15) transparent}
+  .twk-body::-webkit-scrollbar{width:8px}
+  .twk-body::-webkit-scrollbar-track{background:transparent;margin:2px}
+  .twk-body::-webkit-scrollbar-thumb{background:rgba(0,0,0,.15);border-radius:4px;
+    border:2px solid transparent;background-clip:content-box}
+  .twk-body::-webkit-scrollbar-thumb:hover{background:rgba(0,0,0,.25);
+    border:2px solid transparent;background-clip:content-box}
+  .twk-row{display:flex;flex-direction:column;gap:5px}
+  .twk-row-h{flex-direction:row;align-items:center;justify-content:space-between;gap:10px}
+  .twk-lbl{display:flex;justify-content:space-between;align-items:baseline;
+    color:rgba(41,38,27,.72)}
+  .twk-lbl>span:first-child{font-weight:500}
+  .twk-val{color:rgba(41,38,27,.5);font-variant-numeric:tabular-nums}
+
+  .twk-sect{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+    color:rgba(41,38,27,.45);padding:10px 0 0}
+  .twk-sect:first-child{padding-top:0}
+
+  .twk-field{appearance:none;box-sizing:border-box;width:100%;min-width:0;height:26px;padding:0 8px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:7px;
+    background:rgba(255,255,255,.6);color:inherit;font:inherit;outline:none}
+  .twk-field:focus{border-color:rgba(0,0,0,.25);background:rgba(255,255,255,.85)}
+  select.twk-field{padding-right:22px;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='rgba(0,0,0,.5)' d='M0 0h10L5 6z'/></svg>");
+    background-repeat:no-repeat;background-position:right 8px center}
+
+  .twk-slider{appearance:none;-webkit-appearance:none;width:100%;height:4px;margin:6px 0;
+    border-radius:999px;background:rgba(0,0,0,.12);outline:none}
+  .twk-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+    width:14px;height:14px;border-radius:50%;background:#fff;
+    border:.5px solid rgba(0,0,0,.12);box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:default}
+  .twk-slider::-moz-range-thumb{width:14px;height:14px;border-radius:50%;
+    background:#fff;border:.5px solid rgba(0,0,0,.12);box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:default}
+
+  .twk-seg{position:relative;display:flex;padding:2px;border-radius:8px;
+    background:rgba(0,0,0,.06);user-select:none}
+  .twk-seg-thumb{position:absolute;top:2px;bottom:2px;border-radius:6px;
+    background:rgba(255,255,255,.9);box-shadow:0 1px 2px rgba(0,0,0,.12);
+    transition:left .15s cubic-bezier(.3,.7,.4,1),width .15s}
+  .twk-seg.dragging .twk-seg-thumb{transition:none}
+  .twk-seg button{appearance:none;position:relative;z-index:1;flex:1;border:0;
+    background:transparent;color:inherit;font:inherit;font-weight:500;min-height:22px;
+    border-radius:6px;cursor:default;padding:4px 6px;line-height:1.2;
+    overflow-wrap:anywhere}
+
+  .twk-toggle{position:relative;width:32px;height:18px;border:0;border-radius:999px;
+    background:rgba(0,0,0,.15);transition:background .15s;cursor:default;padding:0}
+  .twk-toggle[data-on="1"]{background:#34c759}
+  .twk-toggle i{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;
+    background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+  .twk-toggle[data-on="1"] i{transform:translateX(14px)}
+
+  .twk-num{display:flex;align-items:center;box-sizing:border-box;min-width:0;height:26px;padding:0 0 0 8px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:7px;background:rgba(255,255,255,.6)}
+  .twk-num-lbl{font-weight:500;color:rgba(41,38,27,.6);cursor:ew-resize;
+    user-select:none;padding-right:8px}
+  .twk-num input{flex:1;min-width:0;height:100%;border:0;background:transparent;
+    font:inherit;font-variant-numeric:tabular-nums;text-align:right;padding:0 8px 0 0;
+    outline:none;color:inherit;-moz-appearance:textfield}
+  .twk-num input::-webkit-inner-spin-button,.twk-num input::-webkit-outer-spin-button{
+    -webkit-appearance:none;margin:0}
+  .twk-num-unit{padding-right:8px;color:rgba(41,38,27,.45)}
+
+  .twk-btn{appearance:none;height:26px;padding:0 12px;border:0;border-radius:7px;
+    background:rgba(0,0,0,.78);color:#fff;font:inherit;font-weight:500;cursor:default}
+  .twk-btn:hover{background:rgba(0,0,0,.88)}
+  .twk-btn.secondary{background:rgba(0,0,0,.06);color:inherit}
+  .twk-btn.secondary:hover{background:rgba(0,0,0,.1)}
+
+  .twk-swatch{appearance:none;-webkit-appearance:none;width:56px;height:22px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:6px;padding:0;cursor:default;
+    background:transparent;flex-shrink:0}
+  .twk-swatch::-webkit-color-swatch-wrapper{padding:0}
+  .twk-swatch::-webkit-color-swatch{border:0;border-radius:5.5px}
+  .twk-swatch::-moz-color-swatch{border:0;border-radius:5.5px}
+
+  .twk-chips{display:flex;gap:6px}
+  .twk-chip{position:relative;appearance:none;flex:1;min-width:0;height:46px;
+    padding:0;border:0;border-radius:6px;overflow:hidden;cursor:default;
+    box-shadow:0 0 0 .5px rgba(0,0,0,.12),0 1px 2px rgba(0,0,0,.06);
+    transition:transform .12s cubic-bezier(.3,.7,.4,1),box-shadow .12s}
+  .twk-chip:hover{transform:translateY(-1px);
+    box-shadow:0 0 0 .5px rgba(0,0,0,.18),0 4px 10px rgba(0,0,0,.12)}
+  .twk-chip[data-on="1"]{box-shadow:0 0 0 1.5px rgba(0,0,0,.85),
+    0 2px 6px rgba(0,0,0,.15)}
+  .twk-chip>span{position:absolute;top:0;bottom:0;right:0;width:34%;
+    display:flex;flex-direction:column;box-shadow:-1px 0 0 rgba(0,0,0,.1)}
+  .twk-chip>span>i{flex:1;box-shadow:0 -1px 0 rgba(0,0,0,.1)}
+  .twk-chip>span>i:first-child{box-shadow:none}
+  .twk-chip svg{position:absolute;top:6px;left:6px;width:13px;height:13px;
+    filter:drop-shadow(0 1px 1px rgba(0,0,0,.3))}
+`;
+
+// ── useTweaks ───────────────────────────────────────────────────────────────
+// Persists tweak values in localStorage (survives page reloads and browser restarts).
+// Also maintains postMessage compatibility for the FleetView/Cowork iframe editor.
+const TWEAKS_STORAGE_KEY = 'lifeos_tweaks';
+
+function useTweaks(defaults) {
+  const [values, setValues] = React.useState(() => {
+    // Load persisted values from localStorage on first render
+    try {
+      const saved = localStorage.getItem(TWEAKS_STORAGE_KEY);
+      if (saved) return Object.assign({}, defaults, JSON.parse(saved));
+    } catch (e) {}
+    return defaults;
+  });
+
+  // Apply persisted theme/palette to <body> on first mount
+  React.useEffect(() => {
+    try {
+      const saved = localStorage.getItem(TWEAKS_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.palette) document.body.setAttribute('data-palette', parsed.palette);
+        if (parsed.theme)   document.body.setAttribute('data-theme',   parsed.theme);
+        if (parsed.density) document.body.setAttribute('data-density', parsed.density);
+      }
+    } catch (e) {}
+  }, []);
+
+  // Accepts either setTweak('key', value) or setTweak({ key: value, ... })
+  const setTweak = React.useCallback((keyOrEdits, val) => {
+    const edits = typeof keyOrEdits === 'object' && keyOrEdits !== null
+      ? keyOrEdits : { [keyOrEdits]: val };
+
+    setValues((prev) => {
+      const next = Object.assign({}, prev, edits);
+      // Persist to localStorage
+      try { localStorage.setItem(TWEAKS_STORAGE_KEY, JSON.stringify(next)); } catch (e) {}
+      return next;
+    });
+
+    // Keep postMessage for FleetView/Cowork iframe editor compatibility
+    if (window.parent !== window) {
+      window.parent.postMessage({ type: '__edit_mode_set_keys', edits }, '*');
+    }
+    // Same-window signal for in-page listeners
+    window.dispatchEvent(new CustomEvent('tweakchange', { detail: edits }));
+  }, []);
+
+  return [values, setTweak];
+}
+
+// ── TweaksPanel ─────────────────────────────────────────────────────────────
+// Floating shell. Registers the protocol listener BEFORE announcing
+// availability — if the announce ran first, the host's activate could land
+// before our handler exists and the toolbar toggle would silently no-op.
+// The close button posts __edit_mode_dismissed so the host's toolbar toggle
+// flips off in lockstep; the host echoes __deactivate_edit_mode back which
+// is what actually hides the panel.
+function TweaksPanel({ title = 'Tweaks', noDeckControls = false, children }) {
+  const [open, setOpen] = React.useState(false);
+  const dragRef = React.useRef(null);
+  // Auto-inject a rail toggle when a <deck-stage> is on the page. The
+  // toggle drives the deck's per-viewer _railVisible via window message;
+  // state is mirrored from the same localStorage key the deck reads so
+  // the control reflects reality across reloads. The mechanism is the
+  // message — authors who want custom placement can post it directly
+  // and pass noDeckControls to suppress this one.
+  const hasDeckStage = React.useMemo(
+    () => typeof document !== 'undefined' && !!document.querySelector('deck-stage'),
+    [],
+  );
+  // deck-stage enables its rail in connectedCallback, but this panel can
+  // mount before that element has upgraded. The initial read catches the
+  // common case; the listener covers mounting first. (Older deck-stage.js
+  // copies still wait for the host's __omelette_rail_enabled postMessage —
+  // same listener handles those.)
+  const [railEnabled, setRailEnabled] = React.useState(
+    () => hasDeckStage && !!document.querySelector('deck-stage')?._railEnabled,
+  );
+  React.useEffect(() => {
+    if (!hasDeckStage || railEnabled) return undefined;
+    const onMsg = (e) => {
+      if (e.data && e.data.type === '__omelette_rail_enabled') setRailEnabled(true);
+    };
+    window.addEventListener('message', onMsg);
+    return () => window.removeEventListener('message', onMsg);
+  }, [hasDeckStage, railEnabled]);
+  const [railVisible, setRailVisible] = React.useState(() => {
+    try { return localStorage.getItem('deck-stage.railVisible') !== '0'; } catch (e) { return true; }
+  });
+  const toggleRail = (on) => {
+    setRailVisible(on);
+    window.postMessage({ type: '__deck_rail_visible', on }, '*');
+  };
+  const offsetRef = React.useRef({ x: 16, y: 16 });
+  const PAD = 16;
+
+  const clampToViewport = React.useCallback(() => {
+    const panel = dragRef.current;
+    if (!panel) return;
+    const w = panel.offsetWidth, h = panel.offsetHeight;
+    const maxRight = Math.max(PAD, window.innerWidth - w - PAD);
+    const maxBottom = Math.max(PAD, window.innerHeight - h - PAD);
+    offsetRef.current = {
+      x: Math.min(maxRight, Math.max(PAD, offsetRef.current.x)),
+      y: Math.min(maxBottom, Math.max(PAD, offsetRef.current.y)),
+    };
+    panel.style.right = offsetRef.current.x + 'px';
+    panel.style.bottom = offsetRef.current.y + 'px';
+  }, []);
+
+  React.useEffect(() => {
+    if (!open) return;
+    clampToViewport();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', clampToViewport);
+      return () => window.removeEventListener('resize', clampToViewport);
+    }
+    const ro = new ResizeObserver(clampToViewport);
+    ro.observe(document.documentElement);
+    return () => ro.disconnect();
+  }, [open, clampToViewport]);
+
+  React.useEffect(() => {
+    const onMsg = (e) => {
+      const t = e?.data?.type;
+      if (t === '__activate_edit_mode') setOpen(true);
+      else if (t === '__deactivate_edit_mode') setOpen(false);
+    };
+    window.addEventListener('message', onMsg);
+    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+    return () => window.removeEventListener('message', onMsg);
+  }, []);
+
+  const dismiss = () => {
+    setOpen(false);
+    window.parent.postMessage({ type: '__edit_mode_dismissed' }, '*');
+  };
+
+  const onDragStart = (e) => {
+    const panel = dragRef.current;
+    if (!panel) return;
+    const r = panel.getBoundingClientRect();
+    const sx = e.clientX, sy = e.clientY;
+    const startRight = window.innerWidth - r.right;
+    const startBottom = window.innerHeight - r.bottom;
+    const move = (ev) => {
+      offsetRef.current = {
+        x: startRight - (ev.clientX - sx),
+        y: startBottom - (ev.clientY - sy),
+      };
+      clampToViewport();
+    };
+    const up = () => {
+      window.removeEventListener('mousemove', move);
+      window.removeEventListener('mouseup', up);
+    };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+  };
+
+  if (!open) return null;
+  return (
+    <>
+      <style>{__TWEAKS_STYLE}</style>
+      <div ref={dragRef} className="twk-panel" data-noncommentable=""
+           style={{ right: offsetRef.current.x, bottom: offsetRef.current.y }}>
+        <div className="twk-hd" onMouseDown={onDragStart}>
+          <b>{title}</b>
+          <button className="twk-x" aria-label="Close tweaks"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={dismiss}>✕</button>
+        </div>
+        <div className="twk-body">
+          {children}
+          {hasDeckStage && railEnabled && !noDeckControls && (
+            <TweakSection label="Deck">
+              <TweakToggle label="Thumbnail rail" value={railVisible} onChange={toggleRail} />
+            </TweakSection>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ── Layout helpers ──────────────────────────────────────────────────────────
+
+function TweakSection({ label, children }) {
+  return (
+    <>
+      <div className="twk-sect">{label}</div>
+      {children}
+    </>
+  );
+}
+
+function TweakRow({ label, value, children, inline = false }) {
+  return (
+    <div className={inline ? 'twk-row twk-row-h' : 'twk-row'}>
+      <div className="twk-lbl">
+        <span>{label}</span>
+        {value != null && <span className="twk-val">{value}</span>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+// ── Controls ────────────────────────────────────────────────────────────────
+
+function TweakSlider({ label, value, min = 0, max = 100, step = 1, unit = '', onChange }) {
+  return (
+    <TweakRow label={label} value={`${value}${unit}`}>
+      <input type="range" className="twk-slider" min={min} max={max} step={step}
+             value={value} onChange={(e) => onChange(Number(e.target.value))} />
+    </TweakRow>
+  );
+}
+
+function TweakToggle({ label, value, onChange }) {
+  return (
+    <div className="twk-row twk-row-h">
+      <div className="twk-lbl"><span>{label}</span></div>
+      <button type="button" className="twk-toggle" data-on={value ? '1' : '0'}
+              role="switch" aria-checked={!!value}
+              onClick={() => onChange(!value)}><i /></button>
+    </div>
+  );
+}
+
+function TweakRadio({ label, value, options, onChange }) {
+  const trackRef = React.useRef(null);
+  const [dragging, setDragging] = React.useState(false);
+  // The active value is read by pointer-move handlers attached for the lifetime
+  // of a drag — ref it so a stale closure doesn't fire onChange for every move.
+  const valueRef = React.useRef(value);
+  valueRef.current = value;
+
+  // Segments wrap mid-word once per-segment width runs out. The track is
+  // ~248px (280 panel − 28 body pad − 4 seg pad), each button loses 12px
+  // to its own padding, and 11.5px system-ui averages ~6.3px/char — so 2
+  // options fit ~16 chars each, 3 fit ~10. Past that (or >3 options), fall
+  // back to a dropdown rather than wrap.
+  const labelLen = (o) => String(typeof o === 'object' ? o.label : o).length;
+  const maxLen = options.reduce((m, o) => Math.max(m, labelLen(o)), 0);
+  const fitsAsSegments = maxLen <= ({ 2: 16, 3: 10 }[options.length] ?? 0);
+  if (!fitsAsSegments) {
+    // <select> emits strings — map back to the original option value so the
+    // fallback stays type-preserving (numbers, booleans) like the segment path.
+    const resolve = (s) => {
+      const m = options.find((o) => String(typeof o === 'object' ? o.value : o) === s);
+      return m === undefined ? s : typeof m === 'object' ? m.value : m;
+    };
+    return <TweakSelect label={label} value={value} options={options}
+                        onChange={(s) => onChange(resolve(s))} />;
+  }
+  const opts = options.map((o) => (typeof o === 'object' ? o : { value: o, label: o }));
+  const idx = Math.max(0, opts.findIndex((o) => o.value === value));
+  const n = opts.length;
+
+  const segAt = (clientX) => {
+    const r = trackRef.current.getBoundingClientRect();
+    const inner = r.width - 4;
+    const i = Math.floor(((clientX - r.left - 2) / inner) * n);
+    return opts[Math.max(0, Math.min(n - 1, i))].value;
+  };
+
+  const onPointerDown = (e) => {
+    setDragging(true);
+    const v0 = segAt(e.clientX);
+    if (v0 !== valueRef.current) onChange(v0);
+    const move = (ev) => {
+      if (!trackRef.current) return;
+      const v = segAt(ev.clientX);
+      if (v !== valueRef.current) onChange(v);
+    };
+    const up = () => {
+      setDragging(false);
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+
+  return (
+    <TweakRow label={label}>
+      <div ref={trackRef} role="radiogroup" onPointerDown={onPointerDown}
+           className={dragging ? 'twk-seg dragging' : 'twk-seg'}>
+        <div className="twk-seg-thumb"
+             style={{ left: `calc(2px + ${idx} * (100% - 4px) / ${n})`,
+                      width: `calc((100% - 4px) / ${n})` }} />
+        {opts.map((o) => (
+          <button key={o.value} type="button" role="radio" aria-checked={o.value === value}>
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </TweakRow>
+  );
+}
+
+function TweakSelect({ label, value, options, onChange }) {
+  return (
+    <TweakRow label={label}>
+      <select className="twk-field" value={value} onChange={(e) => onChange(e.target.value)}>
+        {options.map((o) => {
+          const v = typeof o === 'object' ? o.value : o;
+          const l = typeof o === 'object' ? o.label : o;
+          return <option key={v} value={v}>{l}</option>;
+        })}
+      </select>
+    </TweakRow>
+  );
+}
+
+function TweakText({ label, value, placeholder, onChange }) {
+  return (
+    <TweakRow label={label}>
+      <input className="twk-field" type="text" value={value} placeholder={placeholder}
+             onChange={(e) => onChange(e.target.value)} />
+    </TweakRow>
+  );
+}
+
+function TweakNumber({ label, value, min, max, step = 1, unit = '', onChange }) {
+  const clamp = (n) => {
+    if (min != null && n < min) return min;
+    if (max != null && n > max) return max;
+    return n;
+  };
+  const startRef = React.useRef({ x: 0, val: 0 });
+  const onScrubStart = (e) => {
+    e.preventDefault();
+    startRef.current = { x: e.clientX, val: value };
+    const decimals = (String(step).split('.')[1] || '').length;
+    const move = (ev) => {
+      const dx = ev.clientX - startRef.current.x;
+      const raw = startRef.current.val + dx * step;
+      const snapped = Math.round(raw / step) * step;
+      onChange(clamp(Number(snapped.toFixed(decimals))));
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+  return (
+    <div className="twk-num">
+      <span className="twk-num-lbl" onPointerDown={onScrubStart}>{label}</span>
+      <input type="number" value={value} min={min} max={max} step={step}
+             onChange={(e) => onChange(clamp(Number(e.target.value)))} />
+      {unit && <span className="twk-num-unit">{unit}</span>}
+    </div>
+  );
+}
+
+// Relative-luminance contrast pick — checkmarks drawn over a swatch need to
+// read on both #111 and #fafafa without per-option configuration. Hex input
+// only (#rgb / #rrggbb); named or rgb()/hsl() colors fall through to "light".
+function __twkIsLight(hex) {
+  const h = String(hex).replace('#', '');
+  const x = h.length === 3 ? h.replace(/./g, (c) => c + c) : h.padEnd(6, '0');
+  const n = parseInt(x.slice(0, 6), 16);
+  if (Number.isNaN(n)) return true;
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  return r * 299 + g * 587 + b * 114 > 148000;
+}
+
+const __TwkCheck = ({ light }) => (
+  <svg viewBox="0 0 14 14" aria-hidden="true">
+    <path d="M3 7.2 5.8 10 11 4.2" fill="none" strokeWidth="2.2"
+          strokeLinecap="round" strokeLinejoin="round"
+          stroke={light ? 'rgba(0,0,0,.78)' : '#fff'} />
+  </svg>
+);
+
+// TweakColor — curated color/palette picker. Each option is either a single
+// hex string or an array of 1-5 hex strings; the card adapts — a lone color
+// renders solid, a palette renders colors[0] as the hero (left ~2/3) with the
+// rest stacked in a sharp column on the right. onChange emits the
+// option in the shape it was passed (string stays string, array stays array).
+// Without options it falls back to the native color input for back-compat.
+function TweakColor({ label, value, options, onChange }) {
+  if (!options || !options.length) {
+    return (
+      <div className="twk-row twk-row-h">
+        <div className="twk-lbl"><span>{label}</span></div>
+        <input type="color" className="twk-swatch" value={value}
+               onChange={(e) => onChange(e.target.value)} />
+      </div>
+    );
+  }
+  // Native <input type=color> emits lowercase hex per the HTML spec, so
+  // compare case-insensitively. String() guards JSON.stringify(undefined),
+  // which returns the primitive undefined (no .toLowerCase).
+  const key = (o) => String(JSON.stringify(o)).toLowerCase();
+  const cur = key(value);
+  return (
+    <TweakRow label={label}>
+      <div className="twk-chips" role="radiogroup">
+        {options.map((o, i) => {
+          const colors = Array.isArray(o) ? o : [o];
+          const [hero, ...rest] = colors;
+          const sup = rest.slice(0, 4);
+          const on = key(o) === cur;
+          return (
+            <button key={i} type="button" className="twk-chip" role="radio"
+                    aria-checked={on} data-on={on ? '1' : '0'}
+                    aria-label={colors.join(', ')} title={colors.join(' · ')}
+                    style={{ background: hero }}
+                    onClick={() => onChange(o)}>
+              {sup.length > 0 && (
+                <span>
+                  {sup.map((c, j) => <i key={j} style={{ background: c }} />)}
+                </span>
+              )}
+              {on && <__TwkCheck light={__twkIsLight(hero)} />}
+            </button>
+          );
+        })}
+      </div>
+    </TweakRow>
+  );
+}
+
+function TweakButton({ label, onClick, secondary = false }) {
+  return (
+    <button type="button" className={secondary ? 'twk-btn secondary' : 'twk-btn'}
+            onClick={onClick}>{label}</button>
+  );
+}
+
+Object.assign(window, {
+  useTweaks, TweaksPanel, TweakSection, TweakRow,
+  TweakSlider, TweakToggle, TweakRadio, TweakSelect,
+  TweakText, TweakNumber, TweakColor, TweakButton,
+});
+
+</script>
+
+<script type="text/babel">
+/* eslint-disable */
+// LIFEOS — app.jsx — main shell
+// Initialises IndexedDB on mount, loads live data, threads it as props.
+// Three-layer storage: IndexedDB → File on disk → GitHub Gist.
+
+const {
+  useState:   useStateA,
+  useEffect:  useEffectA,
+  useCallback: useCallbackA,
+  useMemo:    useMemoA,
+} = React;
+
+const V = window.LIFEOS_VIEWS;
+const O = window.LIFEOS_OVERLAYS;
+const D = window.LIFEOS_DATA;    // always reflects latest spliced arrays
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "palette":     "pastels",
+  "theme":       "light",
+  "density":     "cozy",
+  "showSidebar": true
+}/*EDITMODE-END*/;
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/** Splice arr contents in place so module-level var references stay valid */
+function spliceArr(arr, newItems) {
+  arr.splice(0, arr.length, ...newItems);
+}
+
+/** Apply loaded data into the shared window.LIFEOS_DATA globals */
+function applyToGlobals({ categories, blocks, allDay }) {
+  spliceArr(D.CATEGORIES, categories);
+  spliceArr(D.WEEK_BLOCKS, blocks);
+  spliceArr(D.ALL_DAY, allDay);
+  // Update CAT_BY_ID in-place (components reference same object)
+  categories.forEach(c => { D.CAT_BY_ID[c.id] = c; });
+}
+
+// ── Loading screen ────────────────────────────────────────────────────────────
+function LoadingScreen() {
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      height: '100vh', gap: 16, color: 'var(--ink-3)',
+    }}>
+      <div style={{
+        width: 32, height: 32, borderRadius: '50%',
+        border: '2px solid var(--hairline-2)',
+        borderTopColor: 'var(--ink)',
+        animation: 'lifeos-spin 0.7s linear infinite',
+      }}/>
+      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, letterSpacing: '0.08em' }}>
+        LIFEOS · загрузка данных…
+      </div>
+      <style>{`@keyframes lifeos-spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
+
+// ── Storage settings panel ────────────────────────────────────────────────────
+function StorageSettings({ syncStatus, onSyncStatusChange }) {
+  const [gistToken, setGistToken] = useStateA('');
+  const [gistStatus, setGistStatus] = useStateA('');
+  const [fileStatus, setFileStatus] = useStateA('');
+  const [importing, setImporting] = useStateA(false);
+  const fileInputRef = React.useRef(null);
+
+  const handlePickFile = async () => {
+    setFileStatus('выбираю…');
+    const result = await window.LIFEOS_SYNC.pickSaveFile();
+    if (result.status === 'configured') {
+      setFileStatus('✅ файл подключён');
+      onSyncStatusChange();
+    } else if (result.status === 'cancelled') {
+      setFileStatus('');
+    } else if (result.status === 'unsupported') {
+      setFileStatus('⚠️ браузер не поддерживает (нужен Chrome/Edge)');
+    } else {
+      setFileStatus('❌ ' + (result.message || 'ошибка'));
+    }
+  };
+
+  const handleConnectGist = async () => {
+    const token = gistToken.trim();
+    if (!token) return;
+    setGistStatus('подключаю…');
+    const result = await window.LIFEOS_SYNC.setupGist(token);
+    if (result.status === 'configured') {
+      setGistStatus(result.existingDataFound
+        ? '✅ подключён · найдены существующие данные'
+        : '✅ подключён · создан новый Gist');
+      setGistToken('');
+      onSyncStatusChange();
+    } else if (result.status === 'invalid_token') {
+      setGistStatus('❌ неверный токен');
+    } else {
+      setGistStatus('❌ ' + (result.message || 'ошибка сети'));
+    }
+  };
+
+  const handleSyncNow = async () => {
+    setGistStatus('синхронизирую…');
+    await window.LIFEOS_SYNC.syncNow();
+    setGistStatus('✅ синхронизировано в ' + new Date().toLocaleTimeString());
+  };
+
+  const handleImport = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setImporting(true);
+    try {
+      await window.LIFEOS_SYNC.importFromFile(file);
+      // Data reload happens via onDataChange callback in App
+    } catch(err) {
+      alert('Ошибка импорта: ' + err.message);
+    }
+    setImporting(false);
+    e.target.value = '';
+  };
+
+  const lastSync = window.LIFEOS_SYNC.getLastSync
+    ? window.LIFEOS_SYNC.getLastSync()
+    : null;
+
+  return (
+    <>
+      {/* ── File System ── */}
+      <window.TweakSection label="Файл на диске · Слой 2">
+        <div style={{ fontSize: 11, color: 'var(--ink-3)', lineHeight: 1.5, marginBottom: 6 }}>
+          {syncStatus.fileConfigured
+            ? '✅ Файл подключён — данные пишутся автоматически'
+            : '⚠️ Не настроен — данные могут потеряться при очистке браузера'}
+        </div>
+        <window.TweakButton
+          label={syncStatus.fileConfigured ? 'Изменить файл' : '+ Выбрать файл сохранения'}
+          onClick={handlePickFile}
+          secondary={syncStatus.fileConfigured}
+        />
+        {fileStatus && (
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--ink-2)', marginTop: 4 }}>
+            {fileStatus}
+          </div>
+        )}
+      </window.TweakSection>
+
+      {/* ── GitHub Gist ── */}
+      <window.TweakSection label="GitHub Gist · Слой 3">
+        {syncStatus.gistConfigured ? (
+          <>
+            <div style={{ fontSize: 11, color: 'var(--ink-3)', lineHeight: 1.5, marginBottom: 6 }}>
+              ✅ Подключён · автосинхронизация каждые 15 мин
+              {lastSync && (
+                <div style={{ marginTop: 2 }}>
+                  Последняя: {lastSync.toLocaleTimeString()}
+                </div>
+              )}
+            </div>
+            <window.TweakButton label="Синхронизировать сейчас" onClick={handleSyncNow} secondary />
+            {gistStatus && (
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--ink-2)', marginTop: 4 }}>
+                {gistStatus}
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            <div style={{ fontSize: 11, color: 'var(--ink-3)', lineHeight: 1.5, marginBottom: 6 }}>
+              Вставьте GitHub Personal Access Token (scope: gist).{' '}
+              <a
+                href="https://github.com/settings/tokens/new?scopes=gist&description=LIFEOS"
+                target="_blank"
+                rel="noopener"
+                style={{ color: 'inherit' }}
+              >Создать токен →</a>
+            </div>
+            <input
+              style={{
+                fontFamily: 'var(--font-mono)', fontSize: 11,
+                border: '0.5px solid rgba(0,0,0,.15)', borderRadius: 7,
+                padding: '5px 8px', width: '100%', boxSizing: 'border-box',
+                background: 'rgba(255,255,255,.7)', outline: 'none',
+              }}
+              placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+              value={gistToken}
+              onChange={e => setGistToken(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleConnectGist(); }}
+            />
+            <window.TweakButton label="Подключить Gist" onClick={handleConnectGist} />
+            {gistStatus && (
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--ink-2)', marginTop: 4 }}>
+                {gistStatus}
+              </div>
+            )}
+          </>
+        )}
+      </window.TweakSection>
+
+      {/* ── Manual backup ── */}
+      <window.TweakSection label="Ручной бэкап">
+        <window.TweakButton
+          label="⬇ Скачать backup.json"
+          onClick={() => window.LIFEOS_SYNC.downloadBackup()}
+          secondary
+        />
+        <window.TweakButton
+          label={importing ? 'Импортирую…' : '⬆ Восстановить из файла'}
+          onClick={() => fileInputRef.current?.click()}
+          secondary
+        />
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json,application/json"
+          style={{ display: 'none' }}
+          onChange={handleImport}
+        />
+      </window.TweakSection>
+    </>
+  );
+}
+
+// ── Root App ──────────────────────────────────────────────────────────────────
+function App() {
+  // ── Loading state ──────────────────────────────────────────────────────────
+  const [loading, setLoading] = useStateA(true);
+
+  // ── Live data (blocks + categories + allDay as React state) ───────────────
+  const [data, setData] = useStateA({
+    categories: D.CATEGORIES,
+    blocks:     D.WEEK_BLOCKS,
+    allDay:     D.ALL_DAY,
+  });
+
+  // ── Sync status (for StorageSettings UI) ──────────────────────────────────
+  const [syncStatus, setSyncStatus] = useStateA({
+    fileConfigured: false,
+    gistConfigured: false,
+  });
+
+  const refreshSyncStatus = useCallbackA(() => {
+    if (window.LIFEOS_SYNC) {
+      setSyncStatus({
+        fileConfigured: window.LIFEOS_SYNC.isFileConfigured(),
+        gistConfigured: window.LIFEOS_SYNC.isGistConfigured(),
+      });
+    }
+  }, []);
+
+  // ── DB init on mount ───────────────────────────────────────────────────────
+  useEffectA(() => {
+    async function init() {
+      // 1. Request persistent storage (protects IndexedDB from auto-eviction)
+      if (navigator.storage && navigator.storage.persist) {
+        navigator.storage.persist().then(granted => {
+          console.log('[LIFEOS] Persistent storage:', granted ? '✅' : '⚠️ not granted');
+        });
+      }
+
+      // 2. Init sync layer (restores file handle from IndexedDB)
+      if (window.LIFEOS_SYNC) {
+        const syncInfo = await window.LIFEOS_SYNC.init();
+        setSyncStatus({
+          fileConfigured: syncInfo.fileConfigured,
+          gistConfigured: syncInfo.gistConfigured,
+        });
+      }
+
+      // 3. Init DB — seeds defaults on first run, loads from DB on subsequent runs
+      const loaded = await window.LIFEOS_DB.init(D);
+
+      // 4. If IndexedDB was empty (fresh install after Clear Site Data), try
+      //    restoring from file or Gist before falling back to demo data.
+      let finalData = { categories: loaded.categories, blocks: loaded.blocks, allDay: loaded.allDay };
+
+      if (loaded.isFirstRun && window.LIFEOS_SYNC) {
+        // Try file first
+        const fromFile = await window.LIFEOS_SYNC.loadFromFile();
+        if (fromFile && (fromFile.blocks || fromFile.WEEK_BLOCKS)) {
+          console.log('[LIFEOS] Restored from file after fresh install');
+          await window.LIFEOS_DB.importJSON(JSON.stringify(fromFile));
+          const reloaded = await window.LIFEOS_DB.loadAll();
+          finalData = reloaded;
+        } else {
+          // Try Gist
+          const fromGist = await window.LIFEOS_SYNC.loadFromGist();
+          if (fromGist && (fromGist.blocks || fromGist.WEEK_BLOCKS)) {
+            console.log('[LIFEOS] Restored from Gist after fresh install');
+            await window.LIFEOS_DB.importJSON(JSON.stringify(fromGist));
+            const reloaded = await window.LIFEOS_DB.loadAll();
+            finalData = reloaded;
+          }
+        }
+      }
+
+      // 5. Splice data into shared globals (for components still reading from DATA.*)
+      applyToGlobals(finalData);
+
+      // 6. Update React state → triggers re-render with live data
+      setData({ ...finalData });
+      setLoading(false);
+    }
+
+    // 7. Register for future DB changes (QuickAdd, checklist toggles, etc.)
+    window.LIFEOS_DB.onDataChange((updatedData) => {
+      applyToGlobals(updatedData);
+      setData({ ...updatedData });
+    });
+
+    init().catch(err => {
+      console.error('[LIFEOS] Init failed:', err);
+      // Fallback: render with hardcoded defaults
+      setLoading(false);
+    });
+  }, []);
+
+  // ── UI state ───────────────────────────────────────────────────────────────
+  const [view, setView] = useStateA('day');
+  const [selectedDay, setSelectedDay] = useStateA(V.NOW.day);
+  const [openBlock, setOpenBlock] = useStateA(null);
+  const [searchOpen, setSearchOpen] = useStateA(false);
+  const [quickOpen, setQuickOpen] = useStateA(false);
+  const [overviewOpen, setOverviewOpen] = useStateA(false);
+  const [openCatProfile, setOpenCatProfile] = useStateA(null);
+
+  // ── Tweaks ─────────────────────────────────────────────────────────────────
+  const [t, setTweakRaw] = window.useTweaks ? window.useTweaks(TWEAK_DEFAULTS) : [TWEAK_DEFAULTS, () => {}];
+  const setTweak = setTweakRaw;
+
+  useEffectA(() => {
+    document.body.setAttribute('data-palette', t.palette || 'pastels');
+    document.body.setAttribute('data-theme',   t.theme   || 'light');
+    document.body.setAttribute('data-density', t.density || 'cozy');
+  }, [t.palette, t.theme, t.density]);
+
+  // ── Category filter — persisted in localStorage ────────────────────────────
+  const [catFilters, setCatFiltersRaw] = useStateA(() => {
+    try {
+      const saved = localStorage.getItem('lifeos_catFilters');
+      if (saved) return new Set(JSON.parse(saved));
+    } catch(e) {}
+    return new Set(D.CATEGORIES.map(c => c.id));
+  });
+
+  const setCatFilters = useCallbackA((next) => {
+    setCatFiltersRaw(next);
+    try { localStorage.setItem('lifeos_catFilters', JSON.stringify([...next])); } catch(e) {}
+  }, []);
+
+  // ── Keyboard shortcuts ─────────────────────────────────────────────────────
+  useEffectA(() => {
+    const onKey = (e) => {
+      if (e.metaKey || e.ctrlKey) {
+        if (e.key.toLowerCase() === 'k') { e.preventDefault(); setQuickOpen(true); }
+        if (e.key.toLowerCase() === 'f') { e.preventDefault(); setSearchOpen(true); }
+      }
+      if (!e.metaKey && !e.ctrlKey) {
+        if (e.key === 'd' || e.key === 'D') setView('day');
+        if (e.key === 'w' || e.key === 'W') setView('week');
+        if (e.key === '/') { e.preventDefault(); setSearchOpen(true); }
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // ── Loading screen ─────────────────────────────────────────────────────────
+  if (loading) return <LoadingScreen />;
+
+  // ── Derived data ───────────────────────────────────────────────────────────
+  const { blocks, categories, allDay } = data;
+
+  const visibleBlocks = useMemoA(
+    () => blocks.filter(b => catFilters.has(b.cat)),
+    [blocks, catFilters]
+  );
+
+  const dayBlocks = useMemoA(
+    () => visibleBlocks.filter(b => b.day === selectedDay),
+    [visibleBlocks, selectedDay]
+  );
+
+  const dayAllDay = useMemoA(
+    () => allDay.filter(a => a.day === selectedDay),
+    [allDay, selectedDay]
+  );
+
+  const date = V.WEEK_DATES[selectedDay];
+
+  return (
+    <>
+      {/* ============ TOP BAR ============ */}
+      <header className="topbar">
+        <div className="brand">
+          <span className="brand-dot"/>
+          LIFEOS
+        </div>
+        <div style={{ width: 1, height: 18, background: 'var(--hairline)', margin: '0 8px' }}/>
+        <div className="crumbs">
+          <b>{V.MONTHS_RU[4]}</b> · 2026 · {V.DOW_FULL[selectedDay]}, {date}
+        </div>
+        <div className="topbar-spacer"/>
+
+        {/* Sync status indicator */}
+        {syncStatus.fileConfigured || syncStatus.gistConfigured ? (
+          <div style={{
+            fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--ink-3)',
+            letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: 4,
+          }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#34c759' }}/>
+            {syncStatus.fileConfigured && syncStatus.gistConfigured ? 'файл + gist' : syncStatus.fileConfigured ? 'файл' : 'gist'}
+          </div>
+        ) : (
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--ink-3)', letterSpacing: '0.06em', opacity: 0.6 }}>
+            только IndexedDB
+          </div>
+        )}
+
+        <div className="pill-group" style={{ marginLeft: 8 }}>
+          <button aria-pressed={view === 'day'}   onClick={() => setView('day')}>День</button>
+          <button aria-pressed={view === 'week'}  onClick={() => setView('week')}>Неделя</button>
+          <button aria-pressed={view === 'month'} onClick={() => {/* not implemented yet */}}>Месяц</button>
+        </div>
+
+        <button className="icon-btn" title="Поиск (⌘F)" onClick={() => setSearchOpen(true)}>
+          <V.Icon name="search" size={16}/>
+        </button>
+        <button className="icon-btn primary" title="Добавить (⌘K)" onClick={() => setQuickOpen(true)}>
+          <V.Icon name="plus" size={18}/>
+        </button>
+      </header>
+
+      {/* ============ MAIN GRID ============ */}
+      <div className="main">
+        {t.showSidebar && (
+          <V.Sidebar
+            blocks={visibleBlocks}
+            categories={categories}
+            catFilters={catFilters}
+            setCatFilters={setCatFilters}
+            selectedDay={selectedDay}
+            setSelectedDay={setSelectedDay}
+            onOpenCategory={setOpenCatProfile}
+          />
+        )}
+
+        <main className="canvas">
+          <div className="canvas-header">
+            <div>
+              <h1 className="canvas-title">
+                {view === 'day' ? (
+                  <>
+                    <span>{date} {V.MONTHS_RU_GEN[4]}</span>
+                    <span className="year-mono">— {V.DOW_FULL[selectedDay].toLowerCase()}</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Май <span style={{ color: 'var(--ink-3)' }}>18–24</span></span>
+                    <span className="year-mono">— нед. 21 · 2026</span>
+                  </>
+                )}
+              </h1>
+              <div className="canvas-subtitle">
+                {view === 'day'
+                  ? `${dayBlocks.length} тайм-блоков · план дня`
+                  : `7 дней · ${visibleBlocks.length} событий`}
+              </div>
+            </div>
+
+            <V.DailySummary dayIndex={selectedDay} onOpenOverview={() => setOverviewOpen(true)}/>
+          </div>
+
+          {view === 'day' ? (
+            <V.DayView
+              blocks={dayBlocks}
+              allDayItems={dayAllDay}
+              dayIndex={selectedDay}
+              onOpenBlock={(b) => setOpenBlock(b)}
+            />
+          ) : (
+            <V.WeekView
+              blocks={visibleBlocks}
+              onOpenBlock={(b) => setOpenBlock(b)}
+              density={t.density}
+              onSelectDay={(d) => { setSelectedDay(d); setView('day'); }}
+            />
+          )}
+
+          <button className="fab" title="Quick Add · ⌘K" onClick={() => setQuickOpen(true)}>
+            <V.Icon name="plus" size={22}/>
+          </button>
+        </main>
+      </div>
+
+      {/* ============ OVERLAYS ============ */}
+      {openBlock && (
+        <O.BlockOverlay block={openBlock} onClose={() => setOpenBlock(null)} />
+      )}
+      {openCatProfile && (
+        <O.CategoryProfileDirect catId={openCatProfile} onClose={() => setOpenCatProfile(null)} />
+      )}
+      {searchOpen && (
+        <O.SearchModal
+          onClose={() => setSearchOpen(false)}
+          onOpenBlock={(b) => setOpenBlock(b)}
+          onOpenCategory={setOpenCatProfile}
+        />
+      )}
+      {quickOpen && (
+        <O.QuickAdd
+          currentDay={selectedDay}
+          onClose={() => setQuickOpen(false)}
+          onBlockSaved={() => {/* data update comes via LIFEOS_DB.onDataChange */}}
+        />
+      )}
+      {overviewOpen && (
+        <O.DayOverview
+          dayIndex={selectedDay}
+          onClose={() => setOverviewOpen(false)}
+          onOpenBlock={(b) => setOpenBlock(b)}
+        />
+      )}
+
+      {/* ============ TWEAKS PANEL ============ */}
+      {window.TweaksPanel && (
+        <window.TweaksPanel title="Tweaks">
+          <window.TweakSection label="Палитра & тема">
+            <window.TweakRadio
+              label="Тема"
+              value={t.theme}
+              options={[{ label: 'Light', value: 'light' }, { label: 'Dark', value: 'dark' }]}
+              onChange={(v) => setTweak('theme', v)}
+            />
+            <window.TweakRadio
+              label="Палитра"
+              value={t.palette}
+              options={[
+                { label: 'Pastels', value: 'pastels' },
+                { label: 'Earthy',  value: 'earthy'  },
+                { label: 'Jewel',   value: 'jewel'   },
+              ]}
+              onChange={(v) => setTweak('palette', v)}
+            />
+          </window.TweakSection>
+
+          <window.TweakSection label="Плотность">
+            <window.TweakRadio
+              label="Блоки"
+              value={t.density}
+              options={[
+                { label: 'Compact', value: 'compact' },
+                { label: 'Cozy',    value: 'cozy'    },
+                { label: 'Airy',    value: 'airy'    },
+              ]}
+              onChange={(v) => setTweak('density', v)}
+            />
+            <window.TweakToggle
+              label="Боковая панель"
+              value={!!t.showSidebar}
+              onChange={(v) => setTweak('showSidebar', v)}
+            />
+          </window.TweakSection>
+
+          <window.TweakSection label="Палитра · превью">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+              {categories.map(c => (
+                <div key={c.id} style={{ ...D.tintStyle(c.id), background: 'oklch(var(--tint))', borderRadius: 8, padding: 8, position: 'relative', overflow: 'hidden' }}>
+                  <div style={{ width: 3, position: 'absolute', left: 0, top: 0, bottom: 0, background: 'oklch(var(--tint-bar))' }}/>
+                  <div style={{ fontSize: 10, fontFamily: 'var(--font-mono)', letterSpacing: '0.06em', color: 'oklch(var(--tint-ink))', textTransform: 'uppercase' }}>{c.nameRu}</div>
+                </div>
+              ))}
+            </div>
+          </window.TweakSection>
+
+          {/* ── Storage settings ── */}
+          <StorageSettings syncStatus={syncStatus} onSyncStatusChange={refreshSyncStatus} />
+
+        </window.TweaksPanel>
+      )}
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('app')).render(<App/>);
+
+</script>
 </body>
 </html>
