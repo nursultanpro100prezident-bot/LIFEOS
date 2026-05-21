@@ -1,353 +1,116 @@
 /* eslint-disable */
-// LIFEOS — app.jsx — main shell
-// Initialises IndexedDB on mount, loads live data, threads it as props.
-// Three-layer storage: IndexedDB → File on disk → GitHub Gist.
+// LIFEOS — app.js — main shell wiring views + overlays + tweaks + storage
 
-const {
-  useState:   useStateA,
-  useEffect:  useEffectA,
-  useCallback: useCallbackA,
-  useMemo:    useMemoA,
-} = React;
-
+const { useState: useStateA, useEffect: useEffectA, useCallback: useCallbackA } = React;
 const V = window.LIFEOS_VIEWS;
 const O = window.LIFEOS_OVERLAYS;
-const D = window.LIFEOS_DATA;    // always reflects latest spliced arrays
+const D = window.LIFEOS_DATA;
 
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
-  "palette":     "pastels",
-  "theme":       "light",
-  "density":     "cozy",
+  "palette": "pastels",
+  "theme": "light",
+  "density": "cozy",
   "showSidebar": true
 }/*EDITMODE-END*/;
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-/** Splice arr contents in place so module-level var references stay valid */
-function spliceArr(arr, newItems) {
-  arr.splice(0, arr.length, ...newItems);
-}
-
-/** Apply loaded data into the shared window.LIFEOS_DATA globals */
-function applyToGlobals({ categories, blocks, allDay }) {
-  spliceArr(D.CATEGORIES, categories);
-  spliceArr(D.WEEK_BLOCKS, blocks);
-  spliceArr(D.ALL_DAY, allDay);
-  // Update CAT_BY_ID in-place (components reference same object)
-  categories.forEach(c => { D.CAT_BY_ID[c.id] = c; });
-}
-
-// ── Loading screen ────────────────────────────────────────────────────────────
 function LoadingScreen() {
   return (
     <div style={{
-      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      height: '100vh', gap: 16, color: 'var(--ink-3)',
+      position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center', background: 'var(--bg)',
+      gap: 16, zIndex: 9999
     }}>
       <div style={{
-        width: 32, height: 32, borderRadius: '50%',
-        border: '2px solid var(--hairline-2)',
-        borderTopColor: 'var(--ink)',
-        animation: 'lifeos-spin 0.7s linear infinite',
+        width: 40, height: 40, border: '3px solid var(--hairline)',
+        borderTopColor: 'var(--accent)', borderRadius: '50%',
+        animation: 'spin 0.8s linear infinite'
       }}/>
-      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, letterSpacing: '0.08em' }}>
-        LIFEOS · загрузка данных…
+      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--ink-3)', letterSpacing: '0.08em' }}>
+        LIFEOS LOADING…
       </div>
-      <style>{`@keyframes lifeos-spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
 
-// ── Storage settings panel ────────────────────────────────────────────────────
-function StorageSettings({ syncStatus, onSyncStatusChange }) {
-  const [gistToken, setGistToken] = useStateA('');
-  const [gistStatus, setGistStatus] = useStateA('');
-  const [fileStatus, setFileStatus] = useStateA('');
-  const [importing, setImporting] = useStateA(false);
-  const fileInputRef = React.useRef(null);
-
-  const handlePickFile = async () => {
-    setFileStatus('выбираю…');
-    const result = await window.LIFEOS_SYNC.pickSaveFile();
-    if (result.status === 'configured') {
-      setFileStatus('✅ файл подключён');
-      onSyncStatusChange();
-    } else if (result.status === 'cancelled') {
-      setFileStatus('');
-    } else if (result.status === 'unsupported') {
-      setFileStatus('⚠️ браузер не поддерживает (нужен Chrome/Edge)');
-    } else {
-      setFileStatus('❌ ' + (result.message || 'ошибка'));
-    }
-  };
-
-  const handleConnectGist = async () => {
-    const token = gistToken.trim();
-    if (!token) return;
-    setGistStatus('подключаю…');
-    const result = await window.LIFEOS_SYNC.setupGist(token);
-    if (result.status === 'configured') {
-      setGistStatus(result.existingDataFound
-        ? '✅ подключён · найдены существующие данные'
-        : '✅ подключён · создан новый Gist');
-      setGistToken('');
-      onSyncStatusChange();
-    } else if (result.status === 'invalid_token') {
-      setGistStatus('❌ неверный токен');
-    } else {
-      setGistStatus('❌ ' + (result.message || 'ошибка сети'));
-    }
-  };
-
-  const handleSyncNow = async () => {
-    setGistStatus('синхронизирую…');
-    await window.LIFEOS_SYNC.syncNow();
-    setGistStatus('✅ синхронизировано в ' + new Date().toLocaleTimeString());
-  };
-
-  const handleImport = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setImporting(true);
-    try {
-      await window.LIFEOS_SYNC.importFromFile(file);
-      // Data reload happens via onDataChange callback in App
-    } catch(err) {
-      alert('Ошибка импорта: ' + err.message);
-    }
-    setImporting(false);
-    e.target.value = '';
-  };
-
-  const lastSync = window.LIFEOS_SYNC.getLastSync
-    ? window.LIFEOS_SYNC.getLastSync()
-    : null;
-
-  return (
-    <>
-      {/* ── File System ── */}
-      <window.TweakSection label="Файл на диске · Слой 2">
-        <div style={{ fontSize: 11, color: 'var(--ink-3)', lineHeight: 1.5, marginBottom: 6 }}>
-          {syncStatus.fileConfigured
-            ? '✅ Файл подключён — данные пишутся автоматически'
-            : '⚠️ Не настроен — данные могут потеряться при очистке браузера'}
-        </div>
-        <window.TweakButton
-          label={syncStatus.fileConfigured ? 'Изменить файл' : '+ Выбрать файл сохранения'}
-          onClick={handlePickFile}
-          secondary={syncStatus.fileConfigured}
-        />
-        {fileStatus && (
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--ink-2)', marginTop: 4 }}>
-            {fileStatus}
-          </div>
-        )}
-      </window.TweakSection>
-
-      {/* ── GitHub Gist ── */}
-      <window.TweakSection label="GitHub Gist · Слой 3">
-        {syncStatus.gistConfigured ? (
-          <>
-            <div style={{ fontSize: 11, color: 'var(--ink-3)', lineHeight: 1.5, marginBottom: 6 }}>
-              ✅ Подключён · автосинхронизация каждые 15 мин
-              {lastSync && (
-                <div style={{ marginTop: 2 }}>
-                  Последняя: {lastSync.toLocaleTimeString()}
-                </div>
-              )}
-            </div>
-            <window.TweakButton label="Синхронизировать сейчас" onClick={handleSyncNow} secondary />
-            {gistStatus && (
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--ink-2)', marginTop: 4 }}>
-                {gistStatus}
-              </div>
-            )}
-          </>
-        ) : (
-          <>
-            <div style={{ fontSize: 11, color: 'var(--ink-3)', lineHeight: 1.5, marginBottom: 6 }}>
-              Вставьте GitHub Personal Access Token (scope: gist).{' '}
-              <a
-                href="https://github.com/settings/tokens/new?scopes=gist&description=LIFEOS"
-                target="_blank"
-                rel="noopener"
-                style={{ color: 'inherit' }}
-              >Создать токен →</a>
-            </div>
-            <input
-              style={{
-                fontFamily: 'var(--font-mono)', fontSize: 11,
-                border: '0.5px solid rgba(0,0,0,.15)', borderRadius: 7,
-                padding: '5px 8px', width: '100%', boxSizing: 'border-box',
-                background: 'rgba(255,255,255,.7)', outline: 'none',
-              }}
-              placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
-              value={gistToken}
-              onChange={e => setGistToken(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') handleConnectGist(); }}
-            />
-            <window.TweakButton label="Подключить Gist" onClick={handleConnectGist} />
-            {gistStatus && (
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--ink-2)', marginTop: 4 }}>
-                {gistStatus}
-              </div>
-            )}
-          </>
-        )}
-      </window.TweakSection>
-
-      {/* ── Manual backup ── */}
-      <window.TweakSection label="Ручной бэкап">
-        <window.TweakButton
-          label="⬇ Скачать backup.json"
-          onClick={() => window.LIFEOS_SYNC.downloadBackup()}
-          secondary
-        />
-        <window.TweakButton
-          label={importing ? 'Импортирую…' : '⬆ Восстановить из файла'}
-          onClick={() => fileInputRef.current?.click()}
-          secondary
-        />
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".json,application/json"
-          style={{ display: 'none' }}
-          onChange={handleImport}
-        />
-      </window.TweakSection>
-    </>
-  );
-}
-
-// ── Root App ──────────────────────────────────────────────────────────────────
 function App() {
-  // ── Loading state ──────────────────────────────────────────────────────────
-  const [loading, setLoading] = useStateA(true);
-
-  // ── Live data (blocks + categories + allDay as React state) ───────────────
-  const [data, setData] = useStateA({
-    categories: D.CATEGORIES,
-    blocks:     D.WEEK_BLOCKS,
-    allDay:     D.ALL_DAY,
-  });
-
-  // ── Sync status (for StorageSettings UI) ──────────────────────────────────
-  const [syncStatus, setSyncStatus] = useStateA({
-    fileConfigured: false,
-    gistConfigured: false,
-  });
-
-  const refreshSyncStatus = useCallbackA(() => {
-    if (window.LIFEOS_SYNC) {
-      setSyncStatus({
-        fileConfigured: window.LIFEOS_SYNC.isFileConfigured(),
-        gistConfigured: window.LIFEOS_SYNC.isGistConfigured(),
-      });
-    }
-  }, []);
-
-  // ── DB init on mount ───────────────────────────────────────────────────────
-  useEffectA(() => {
-    async function init() {
-      // 1. Request persistent storage (protects IndexedDB from auto-eviction)
-      if (navigator.storage && navigator.storage.persist) {
-        navigator.storage.persist().then(granted => {
-          console.log('[LIFEOS] Persistent storage:', granted ? '✅' : '⚠️ not granted');
-        });
-      }
-
-      // 2. Init sync layer (restores file handle from IndexedDB)
-      if (window.LIFEOS_SYNC) {
-        const syncInfo = await window.LIFEOS_SYNC.init();
-        setSyncStatus({
-          fileConfigured: syncInfo.fileConfigured,
-          gistConfigured: syncInfo.gistConfigured,
-        });
-      }
-
-      // 3. Init DB — seeds defaults on first run, loads from DB on subsequent runs
-      const loaded = await window.LIFEOS_DB.init(D);
-
-      // 4. If IndexedDB was empty (fresh install after Clear Site Data), try
-      //    restoring from file or Gist before falling back to demo data.
-      let finalData = { categories: loaded.categories, blocks: loaded.blocks, allDay: loaded.allDay };
-
-      if (loaded.isFirstRun && window.LIFEOS_SYNC) {
-        // Try file first
-        const fromFile = await window.LIFEOS_SYNC.loadFromFile();
-        if (fromFile && (fromFile.blocks || fromFile.WEEK_BLOCKS)) {
-          console.log('[LIFEOS] Restored from file after fresh install');
-          await window.LIFEOS_DB.importJSON(JSON.stringify(fromFile));
-          const reloaded = await window.LIFEOS_DB.loadAll();
-          finalData = reloaded;
-        } else {
-          // Try Gist
-          const fromGist = await window.LIFEOS_SYNC.loadFromGist();
-          if (fromGist && (fromGist.blocks || fromGist.WEEK_BLOCKS)) {
-            console.log('[LIFEOS] Restored from Gist after fresh install');
-            await window.LIFEOS_DB.importJSON(JSON.stringify(fromGist));
-            const reloaded = await window.LIFEOS_DB.loadAll();
-            finalData = reloaded;
-          }
-        }
-      }
-
-      // 5. Splice data into shared globals (for components still reading from DATA.*)
-      applyToGlobals(finalData);
-
-      // 6. Update React state → triggers re-render with live data
-      setData({ ...finalData });
-      setLoading(false);
-    }
-
-    // 7. Register for future DB changes (QuickAdd, checklist toggles, etc.)
-    window.LIFEOS_DB.onDataChange((updatedData) => {
-      applyToGlobals(updatedData);
-      setData({ ...updatedData });
-    });
-
-    init().catch(err => {
-      console.error('[LIFEOS] Init failed:', err);
-      // Fallback: render with hardcoded defaults
-      setLoading(false);
-    });
-  }, []);
-
-  // ── UI state ───────────────────────────────────────────────────────────────
-  const [view, setView] = useStateA('day');
-  const [selectedDay, setSelectedDay] = useStateA(V.NOW.day);
-  const [openBlock, setOpenBlock] = useStateA(null);
-  const [searchOpen, setSearchOpen] = useStateA(false);
-  const [quickOpen, setQuickOpen] = useStateA(false);
+  const [loading, setLoading]           = useStateA(true);
+  const [tick, setTick]                 = useStateA(0);
+  const [view, setView]                 = useStateA('day');
+  const [selectedDay, setSelectedDay]   = useStateA(V.NOW.day);
+  const [openBlock, setOpenBlock]       = useStateA(null);
+  const [searchOpen, setSearchOpen]     = useStateA(false);
+  const [quickOpen, setQuickOpen]       = useStateA(false);
   const [overviewOpen, setOverviewOpen] = useStateA(false);
   const [openCatProfile, setOpenCatProfile] = useStateA(null);
 
-  // ── Tweaks ─────────────────────────────────────────────────────────────────
+  // Tweaks
   const [t, setTweakRaw] = window.useTweaks ? window.useTweaks(TWEAK_DEFAULTS) : [TWEAK_DEFAULTS, () => {}];
   const setTweak = setTweakRaw;
 
+  // Apply palette + theme + density to <body>
   useEffectA(() => {
     document.body.setAttribute('data-palette', t.palette || 'pastels');
-    document.body.setAttribute('data-theme',   t.theme   || 'light');
+    document.body.setAttribute('data-theme', t.theme || 'light');
     document.body.setAttribute('data-density', t.density || 'cozy');
   }, [t.palette, t.theme, t.density]);
 
-  // ── Category filter — persisted in localStorage ────────────────────────────
-  const [catFilters, setCatFiltersRaw] = useStateA(() => {
+  // Category filter: persist to localStorage
+  const [catFilters, setCatFilters] = useStateA(() => {
     try {
       const saved = localStorage.getItem('lifeos_catFilters');
       if (saved) return new Set(JSON.parse(saved));
-    } catch(e) {}
+    } catch {}
     return new Set(D.CATEGORIES.map(c => c.id));
   });
 
-  const setCatFilters = useCallbackA((next) => {
-    setCatFiltersRaw(next);
-    try { localStorage.setItem('lifeos_catFilters', JSON.stringify([...next])); } catch(e) {}
+  const updateCatFilters = useCallbackA((next) => {
+    setCatFilters(next);
+    try { localStorage.setItem('lifeos_catFilters', JSON.stringify([...next])); } catch {}
   }, []);
 
-  // ── Keyboard shortcuts ─────────────────────────────────────────────────────
+  // DB init + live reload via onDataChange
+  useEffectA(() => {
+    const spliceGlobals = (data) => {
+      if (data.categories && data.categories.length > 0) {
+        D.CATEGORIES.splice(0, D.CATEGORIES.length, ...data.categories);
+        data.categories.forEach(c => { D.CAT_BY_ID[c.id] = c; });
+      }
+      if (data.blocks) {
+        D.WEEK_BLOCKS.splice(0, D.WEEK_BLOCKS.length, ...data.blocks);
+      }
+      if (data.allDay) {
+        D.ALL_DAY.splice(0, D.ALL_DAY.length, ...data.allDay);
+      }
+      setTick(n => n + 1);
+    };
+
+    if (window.LIFEOS_DB) {
+      window.LIFEOS_DB.onDataChange(spliceGlobals);
+    }
+
+    async function init() {
+      try {
+        if (window.LIFEOS_SYNC) await window.LIFEOS_SYNC.init();
+        if (window.LIFEOS_DB) {
+          const loaded = await window.LIFEOS_DB.init(D);
+          spliceGlobals(loaded);
+        }
+      } catch (err) {
+        console.error('LIFEOS: storage init failed', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    init();
+  }, []);
+
+  // Filter blocks by visible categories
+  const visibleBlocks = D.WEEK_BLOCKS.filter(b => catFilters.has(b.cat));
+  const dayBlocks = visibleBlocks.filter(b => b.day === selectedDay);
+
+  // Keyboard shortcuts
   useEffectA(() => {
     const onKey = (e) => {
       if (e.metaKey || e.ctrlKey) {
@@ -364,26 +127,7 @@ function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  // ── Loading screen ─────────────────────────────────────────────────────────
   if (loading) return <LoadingScreen />;
-
-  // ── Derived data ───────────────────────────────────────────────────────────
-  const { blocks, categories, allDay } = data;
-
-  const visibleBlocks = useMemoA(
-    () => blocks.filter(b => catFilters.has(b.cat)),
-    [blocks, catFilters]
-  );
-
-  const dayBlocks = useMemoA(
-    () => visibleBlocks.filter(b => b.day === selectedDay),
-    [visibleBlocks, selectedDay]
-  );
-
-  const dayAllDay = useMemoA(
-    () => allDay.filter(a => a.day === selectedDay),
-    [allDay, selectedDay]
-  );
 
   const date = V.WEEK_DATES[selectedDay];
 
@@ -401,22 +145,7 @@ function App() {
         </div>
         <div className="topbar-spacer"/>
 
-        {/* Sync status indicator */}
-        {syncStatus.fileConfigured || syncStatus.gistConfigured ? (
-          <div style={{
-            fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--ink-3)',
-            letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: 4,
-          }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#34c759' }}/>
-            {syncStatus.fileConfigured && syncStatus.gistConfigured ? 'файл + gist' : syncStatus.fileConfigured ? 'файл' : 'gist'}
-          </div>
-        ) : (
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--ink-3)', letterSpacing: '0.06em', opacity: 0.6 }}>
-            только IndexedDB
-          </div>
-        )}
-
-        <div className="pill-group" style={{ marginLeft: 8 }}>
+        <div className="pill-group">
           <button aria-pressed={view === 'day'}   onClick={() => setView('day')}>День</button>
           <button aria-pressed={view === 'week'}  onClick={() => setView('week')}>Неделя</button>
           <button aria-pressed={view === 'month'} onClick={() => {/* not implemented yet */}}>Месяц</button>
@@ -434,10 +163,8 @@ function App() {
       <div className="main">
         {t.showSidebar && (
           <V.Sidebar
-            blocks={visibleBlocks}
-            categories={categories}
             catFilters={catFilters}
-            setCatFilters={setCatFilters}
+            setCatFilters={updateCatFilters}
             selectedDay={selectedDay}
             setSelectedDay={setSelectedDay}
             onOpenCategory={setOpenCatProfile}
@@ -461,9 +188,7 @@ function App() {
                 )}
               </h1>
               <div className="canvas-subtitle">
-                {view === 'day'
-                  ? `${dayBlocks.length} тайм-блоков · план дня`
-                  : `7 дней · ${visibleBlocks.length} событий`}
+                {view === 'day' ? `${dayBlocks.length} тайм-блоков · план дня` : `7 дней · ${visibleBlocks.length} событий`}
               </div>
             </div>
 
@@ -473,13 +198,11 @@ function App() {
           {view === 'day' ? (
             <V.DayView
               blocks={dayBlocks}
-              allDayItems={dayAllDay}
               dayIndex={selectedDay}
               onOpenBlock={(b) => setOpenBlock(b)}
             />
           ) : (
             <V.WeekView
-              blocks={visibleBlocks}
               onOpenBlock={(b) => setOpenBlock(b)}
               density={t.density}
               onSelectDay={(d) => { setSelectedDay(d); setView('day'); }}
@@ -493,33 +216,11 @@ function App() {
       </div>
 
       {/* ============ OVERLAYS ============ */}
-      {openBlock && (
-        <O.BlockOverlay block={openBlock} onClose={() => setOpenBlock(null)} />
-      )}
-      {openCatProfile && (
-        <O.CategoryProfileDirect catId={openCatProfile} onClose={() => setOpenCatProfile(null)} />
-      )}
-      {searchOpen && (
-        <O.SearchModal
-          onClose={() => setSearchOpen(false)}
-          onOpenBlock={(b) => setOpenBlock(b)}
-          onOpenCategory={setOpenCatProfile}
-        />
-      )}
-      {quickOpen && (
-        <O.QuickAdd
-          currentDay={selectedDay}
-          onClose={() => setQuickOpen(false)}
-          onBlockSaved={() => {/* data update comes via LIFEOS_DB.onDataChange */}}
-        />
-      )}
-      {overviewOpen && (
-        <O.DayOverview
-          dayIndex={selectedDay}
-          onClose={() => setOverviewOpen(false)}
-          onOpenBlock={(b) => setOpenBlock(b)}
-        />
-      )}
+      {openBlock && <O.BlockOverlay block={openBlock} onClose={() => setOpenBlock(null)} />}
+      {openCatProfile && <O.CategoryProfileDirect catId={openCatProfile} onClose={() => setOpenCatProfile(null)} />}
+      {searchOpen && <O.SearchModal onClose={() => setSearchOpen(false)} onOpenBlock={(b) => setOpenBlock(b)} onOpenCategory={setOpenCatProfile}/>}
+      {quickOpen && <O.QuickAdd onClose={() => setQuickOpen(false)} currentDay={selectedDay}/>}
+      {overviewOpen && <O.DayOverview dayIndex={selectedDay} onClose={() => setOverviewOpen(false)} onOpenBlock={(b) => setOpenBlock(b)}/>}
 
       {/* ============ TWEAKS PANEL ============ */}
       {window.TweaksPanel && (
@@ -536,34 +237,65 @@ function App() {
               value={t.palette}
               options={[
                 { label: 'Pastels', value: 'pastels' },
-                { label: 'Earthy',  value: 'earthy'  },
-                { label: 'Jewel',   value: 'jewel'   },
+                { label: 'Earthy', value: 'earthy' },
+                { label: 'Jewel', value: 'jewel' },
               ]}
               onChange={(v) => setTweak('palette', v)}
             />
           </window.TweakSection>
-
           <window.TweakSection label="Плотность">
             <window.TweakRadio
               label="Блоки"
               value={t.density}
               options={[
                 { label: 'Compact', value: 'compact' },
-                { label: 'Cozy',    value: 'cozy'    },
-                { label: 'Airy',    value: 'airy'    },
+                { label: 'Cozy', value: 'cozy' },
+                { label: 'Airy', value: 'airy' },
               ]}
               onChange={(v) => setTweak('density', v)}
             />
             <window.TweakToggle
               label="Боковая панель"
-              value={!!t.showSidebar}
+              checked={!!t.showSidebar}
               onChange={(v) => setTweak('showSidebar', v)}
             />
           </window.TweakSection>
-
+          <window.TweakSection label="Синхронизация">
+            <window.TweakButton
+              label="Сохранить в файл"
+              onClick={async () => {
+                if (window.LIFEOS_SYNC) await window.LIFEOS_SYNC.pickSaveFile();
+              }}
+            />
+            <window.TweakButton
+              label="Экспорт JSON"
+              onClick={async () => {
+                if (!window.LIFEOS_DB) return;
+                const json = await window.LIFEOS_DB.exportJSON();
+                const blob = new Blob([json], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = 'lifeos-backup.json'; a.click();
+                URL.revokeObjectURL(url);
+              }}
+            />
+            <window.TweakButton
+              label="Импорт JSON"
+              onClick={() => {
+                const inp = document.createElement('input');
+                inp.type = 'file'; inp.accept = '.json';
+                inp.onchange = async (e) => {
+                  const file = e.target.files[0];
+                  if (!file || !window.LIFEOS_SYNC) return;
+                  await window.LIFEOS_SYNC.importFromFile(file);
+                };
+                inp.click();
+              }}
+            />
+          </window.TweakSection>
           <window.TweakSection label="Палитра · превью">
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
-              {categories.map(c => (
+              {D.CATEGORIES.map(c => (
                 <div key={c.id} style={{ ...D.tintStyle(c.id), background: 'oklch(var(--tint))', borderRadius: 8, padding: 8, position: 'relative', overflow: 'hidden' }}>
                   <div style={{ width: 3, position: 'absolute', left: 0, top: 0, bottom: 0, background: 'oklch(var(--tint-bar))' }}/>
                   <div style={{ fontSize: 10, fontFamily: 'var(--font-mono)', letterSpacing: '0.06em', color: 'oklch(var(--tint-ink))', textTransform: 'uppercase' }}>{c.nameRu}</div>
@@ -571,10 +303,6 @@ function App() {
               ))}
             </div>
           </window.TweakSection>
-
-          {/* ── Storage settings ── */}
-          <StorageSettings syncStatus={syncStatus} onSyncStatusChange={refreshSyncStatus} />
-
         </window.TweaksPanel>
       )}
     </>

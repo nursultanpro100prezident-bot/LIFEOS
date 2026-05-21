@@ -157,53 +157,22 @@ const __TWEAKS_STYLE = `
 `;
 
 // ── useTweaks ───────────────────────────────────────────────────────────────
-// Persists tweak values in localStorage (survives page reloads and browser restarts).
-// Also maintains postMessage compatibility for the FleetView/Cowork iframe editor.
-const TWEAKS_STORAGE_KEY = 'lifeos_tweaks';
-
+// Single source of truth for tweak values. setTweak persists via the host
+// (__edit_mode_set_keys → host rewrites the EDITMODE block on disk).
 function useTweaks(defaults) {
-  const [values, setValues] = React.useState(() => {
-    // Load persisted values from localStorage on first render
-    try {
-      const saved = localStorage.getItem(TWEAKS_STORAGE_KEY);
-      if (saved) return Object.assign({}, defaults, JSON.parse(saved));
-    } catch (e) {}
-    return defaults;
-  });
-
-  // Apply persisted theme/palette to <body> on first mount
-  React.useEffect(() => {
-    try {
-      const saved = localStorage.getItem(TWEAKS_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.palette) document.body.setAttribute('data-palette', parsed.palette);
-        if (parsed.theme)   document.body.setAttribute('data-theme',   parsed.theme);
-        if (parsed.density) document.body.setAttribute('data-density', parsed.density);
-      }
-    } catch (e) {}
-  }, []);
-
-  // Accepts either setTweak('key', value) or setTweak({ key: value, ... })
+  const [values, setValues] = React.useState(defaults);
+  // Accepts either setTweak('key', value) or setTweak({ key: value, ... }) so a
+  // useState-style call doesn't write a "[object Object]" key into the persisted
+  // JSON block.
   const setTweak = React.useCallback((keyOrEdits, val) => {
     const edits = typeof keyOrEdits === 'object' && keyOrEdits !== null
       ? keyOrEdits : { [keyOrEdits]: val };
-
-    setValues((prev) => {
-      const next = Object.assign({}, prev, edits);
-      // Persist to localStorage
-      try { localStorage.setItem(TWEAKS_STORAGE_KEY, JSON.stringify(next)); } catch (e) {}
-      return next;
-    });
-
-    // Keep postMessage for FleetView/Cowork iframe editor compatibility
-    if (window.parent !== window) {
-      window.parent.postMessage({ type: '__edit_mode_set_keys', edits }, '*');
-    }
-    // Same-window signal for in-page listeners
+    setValues((prev) => ({ ...prev, ...edits }));
+    window.parent.postMessage({ type: '__edit_mode_set_keys', edits }, '*');
+    // Same-window signal so in-page listeners (deck-stage rail thumbnails)
+    // can react — the parent message only reaches the host, not peers.
     window.dispatchEvent(new CustomEvent('tweakchange', { detail: edits }));
   }, []);
-
   return [values, setTweak];
 }
 

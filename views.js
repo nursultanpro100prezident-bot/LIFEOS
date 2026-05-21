@@ -61,8 +61,7 @@ const NOW = { day: 2, hour: 10 + 28/60 };
 const WEEK_DATES = [18, 19, 20, 21, 22, 23, 24]; // mon-sun
 
 // ============== SIDEBAR ==============
-// blocks + categories passed as props so useMemo reacts to live data changes
-function Sidebar({ blocks, categories, catFilters, setCatFilters, selectedDay, setSelectedDay, onOpenCategory }) {
+function Sidebar({ catFilters, setCatFilters, selectedDay, setSelectedDay, onOpenCategory }) {
   // Mini-month for May 2026
   const monthGrid = useMemo(() => {
     // May 1 2026 is Friday; week starts Monday → 4 leading dim cells
@@ -82,12 +81,12 @@ function Sidebar({ blocks, categories, catFilters, setCatFilters, selectedDay, s
     setCatFilters(next);
   };
 
-  // Count blocks per category — recomputes when blocks array changes
+  // Count blocks per category in the week
   const counts = useMemo(() => {
     const m = {};
-    blocks.forEach(b => { m[b.cat] = (m[b.cat] || 0) + 1; });
+    WEEK_BLOCKS.forEach(b => { m[b.cat] = (m[b.cat] || 0) + 1; });
     return m;
-  }, [blocks]);
+  }, []);
 
   return (
     <aside className="sidebar">
@@ -116,7 +115,7 @@ function Sidebar({ blocks, categories, catFilters, setCatFilters, selectedDay, s
       <div>
         <h2 className="side-section-title">Направления жизни</h2>
         <div className="cat-list">
-          {categories.map(cat => {
+          {CATEGORIES.map(cat => {
             const active = catFilters.has(cat.id);
             return (
               <div
@@ -290,21 +289,18 @@ function layoutOverlaps(blocks) {
 }
 
 // ============== WEEK VIEW ==============
-// blocks passed as prop so colDensity and rendering react to live data changes
-function WeekView({ blocks, onOpenBlock, density, onSelectDay }) {
+function WeekView({ onOpenBlock, density, onSelectDay }) {
   const hours = [];
   for (let h = DAY_START; h <= DAY_END; h++) hours.push(h);
 
-  // Categorical density per day — recomputes when blocks changes
+  // Categorical density visualisation
   const colDensity = useMemo(() => {
     const out = WEEK_DATES.map(() => ({}));
-    blocks.forEach(b => {
-      if (b.day >= 0 && b.day < WEEK_DATES.length) {
-        out[b.day][b.cat] = (out[b.day][b.cat] || 0) + (b.end - b.start);
-      }
+    WEEK_BLOCKS.forEach(b => {
+      out[b.day][b.cat] = (out[b.day][b.cat] || 0) + (b.end - b.start);
     });
     return out;
-  }, [blocks]);
+  }, []);
 
   return (
     <div className="weekview">
@@ -333,7 +329,7 @@ function WeekView({ blocks, onOpenBlock, density, onSelectDay }) {
 
         <div className="week-cols">
           {WEEK_DATES.map((date, dayIdx) => {
-            const dayBlocks = blocks.filter(b => b.day === dayIdx);
+            const dayBlocks = WEEK_BLOCKS.filter(b => b.day === dayIdx);
             const laid = layoutOverlaps(dayBlocks);
             return (
               <div key={dayIdx} className={`week-col ${dayIdx === NOW.day ? 'today' : ''}`} style={{ height: (DAY_END - DAY_START) * HOUR_PX + 24 }}>
@@ -412,4 +408,4 @@ function DailySummary({ dayIndex, onOpenOverview }) {
   );
 }
 
-window.LIFEOS_VIEWS = { Sidebar, DayView, WeekView, DailySummary, Icon, fmtH, DOW_FULL, MONTHS_RU, MONTHS_RU_GEN, WEEK_DATES, NOW, HOUR_PX, DAY_START, DAY_END, layoutOverlaps };
+window.LIFEOS_VIEWS = { Sidebar, DayView, WeekView, DailySummary, Icon, fmtH, DOW_FULL, MONTHS_RU, MONTHS_RU_GEN, WEEK_DATES, NOW, HOUR_PX, DAY_START, DAY_END };
