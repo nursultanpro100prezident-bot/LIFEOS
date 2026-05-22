@@ -929,7 +929,7 @@ svg { display: block; }
   gap: 36px 48px;
   align-content: start;
 }
-@media (max-width: 760px) { .l2-body { grid-template-columns: 1fr; padding: 24px 24px 40px; } .l2-hero { padding: 24px 24px 22px; } .l2-title { font-size: 48px; } }
+@media (max-width: 880px) { .l2-body { grid-template-columns: 1fr; padding: 24px 24px 40px; } .l2-hero { padding: 24px 24px 22px; } .l2-title { font-size: 48px; } }
 
 .l2-block {
   display: flex; flex-direction: column; gap: 16px;
@@ -1282,8 +1282,8 @@ svg { display: block; }
   --bn-h: 62px;
 }
 
-/* ---- Tablet 768–1023px ---- */
-@media (min-width: 768px) and (max-width: 1023px) {
+/* ---- Tablet 881–1023px ---- */
+@media (min-width: 881px) and (max-width: 1023px) {
   .topbar { padding: 14px 20px 10px; }
   .canvas-title { font-size: 40px; }
   .main { grid-template-columns: 220px 1fr; }
@@ -1313,6 +1313,7 @@ svg { display: block; }
   }
   .topbar .pill-group { display: none; }
   .crumbs { display: none; }
+  .topbar .icon-btn.primary { display: none; } /* FAB is the add CTA on mobile */
   .icon-btn { width: 44px; height: 44px; border-radius: 12px; }
 
   /* Main grid */
@@ -1355,16 +1356,18 @@ svg { display: block; }
   /* Day view */
   .dayview { grid-template-columns: 44px 1fr; }
   .hour-label { font-size: 9.5px; right: 6px; }
-  .block { min-height: 32px; border-radius: var(--r-sm); }
+  .block { min-height: 40px; border-radius: var(--r-sm); }
   .block-title { font-size: 12px; }
-  .block-time  { font-size: 9.5px; }
+  .block-time  { font-size: 11px; opacity: 0.85; }
   .allday-row  { padding: 6px 8px 4px; }
-  .allday-chip { min-height: 32px; padding: 5px 10px; font-size: 11.5px; }
+  .allday-chip { min-height: 36px; padding: 5px 10px; font-size: 11.5px; }
 
-  /* Week view */
-  .weekview { grid-template-columns: 38px 1fr; }
-  .weekview .hours-gutter { padding-top: 72px; }
-  .weekgrid { grid-template-rows: 72px 1fr; }
+  /* Week view — horizontal scroll (shows all 7 days) */
+  .weekview { grid-template-columns: 38px 1fr; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .weekview .hours-gutter { padding-top: 72px; flex-shrink: 0; background: var(--bg); }
+  .weekgrid { grid-template-rows: 72px 1fr; min-width: calc(7 * 52px); }
+  .week-heads { grid-template-columns: repeat(7, minmax(52px, 1fr)); }
+  .week-cols  { grid-template-columns: repeat(7, minmax(52px, 1fr)); }
   .week-head { padding: 6px 3px; }
   .week-head .dow { font-size: 8.5px; letter-spacing: 0.05em; }
   .week-head .dom { font-size: 17px; }
@@ -1373,8 +1376,8 @@ svg { display: block; }
   .week-col .block .block-title { font-size: 9.5px; }
   .week-col .block .block-time  { display: none; }
 
-  /* FAB */
-  .fab { right: 16px; bottom: 16px; width: 50px; height: 50px; }
+  /* FAB — fixed above bottom nav */
+  .fab { position: fixed; right: 20px; bottom: calc(var(--bn-h) + var(--safe-b) + 12px); width: 52px; height: 52px; }
 
   /* L1 header */
   .l1-header { padding: 16px 16px 12px; }
@@ -1385,8 +1388,8 @@ svg { display: block; }
   .l1-val    { font-size: 13px; }
   .l1-row    { padding: 10px 0; gap: 10px; }
   .l1-context-cta { padding: 12px 14px; }
-  .check-item { padding: 10px 0; }
-  .check-box  { width: 22px; height: 22px; border-radius: 6px; }
+  .check-item { padding: 10px 0; min-height: 44px; }
+  .check-box  { width: 26px; height: 26px; border-radius: 7px; flex-shrink: 0; }
 
   /* L2 hero */
   .l2-hero   { padding: 16px 16px 14px; }
@@ -1417,12 +1420,17 @@ svg { display: block; }
   /* Buttons / rows */
   .btn { min-height: 44px; padding: 12px 18px; font-size: 14px; }
   .cat-row { min-height: 44px; }
+  .sum-chip { min-height: 40px; min-width: 44px; }
+
+  /* Hide desktop-only elements */
+  kbd { display: none; }
+  .dbl-hint { display: none; }
 
   /* iOS: prevent auto-zoom on input focus */
   input, textarea, select { font-size: max(16px, 1em); }
 
-  /* Overflow guard */
-  .canvas, .canvas-header { max-width: 100vw; overflow-x: hidden; }
+  /* Overflow guard — allow summary chips to scroll inside canvas-header */
+  .canvas, .canvas-header { max-width: 100vw; }
 }
 
 /* ---- XS phones ≤389px ---- */
@@ -1532,9 +1540,10 @@ svg { display: block; }
 
 @media (max-width: 767px) {
   .mob-overlay { display: block; }
-  .mob-overlay.open { opacity: 1; pointer-events: auto; }
-  .mob-drawer.open  { transform: translateX(0); }
 }
+/* Open states are JS-controlled — must live outside the media query */
+.mob-overlay.open { opacity: 1; pointer-events: auto; }
+.mob-drawer.open  { transform: translateX(0); }
 
 /* ============================================================
    MOBILE DAY NAVIGATION ARROWS
@@ -1586,6 +1595,38 @@ svg { display: block; }
    ============================================================ */
 @media (display-mode: standalone) {
   .topbar { padding-top: calc(12px + var(--safe-t)); }
+}
+
+/* ============================================================
+   ADDITIONAL TOUCH & ACCESSIBILITY IMPROVEMENTS
+   ============================================================ */
+
+/* Pill-group touch targets */
+.pill-group button {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Disable month button (not yet implemented) */
+.pill-group button:disabled {
+  pointer-events: none;
+}
+
+/* Block text overflow on narrow columns (parallel events) */
+.block { overflow: hidden; }
+.block-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Side section title min size */
+.side-section-title { font-size: max(11px, var(--font-size, 10.5px)); }
+
+/* Touch-friendly btn.solid */
+@media (hover: none) and (pointer: coarse) {
+  .dbl-hint { display: none; }
 }
 
 </style>
@@ -2579,7 +2620,7 @@ function Sidebar({ catFilters, setCatFilters, selectedDay, setSelectedDay, onOpe
             );
           })}
         </div>
-        <div style={{ marginTop: 10, fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--ink-3)', letterSpacing: '0.04em', padding: '6px 8px' }}>
+        <div className="dbl-hint" style={{ marginTop: 10, fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--ink-3)', letterSpacing: '0.04em', padding: '6px 8px' }}>
           dbl-click · открыть профиль
         </div>
       </div>
@@ -2706,6 +2747,18 @@ function DayView({ blocks, allDayItems, dayIndex, onOpenBlock }) {
         {isToday && (
           <div className="now-bar" style={{ top: (NOW.hour - DAY_START) * HOUR_PX }}>
             <span className="now-label">{fmtH(NOW.hour)}</span>
+          </div>
+        )}
+
+        {blocks.length === 0 && (
+          <div style={{
+            position: 'absolute', top: '35%', left: '50%', transform: 'translate(-50%, -50%)',
+            textAlign: 'center', color: 'var(--ink-3)', pointerEvents: 'none',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+          }}>
+            <Icon name="clock" size={36}/>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: 4 }}>Свободный день</div>
+            <div style={{ fontSize: 12, opacity: 0.7, marginTop: 2 }}>Нажмите + чтобы добавить событие</div>
           </div>
         )}
       </div>
@@ -2864,7 +2917,7 @@ function BottomNav({ view, setView, onSearch, onAdd, onDrawer }) {
         onClick={() => setView('day')}
         aria-label="День"
       >
-        <span className="bn-icon"><Icon name="sun" size={20}/></span>
+        <span className="bn-icon"><Icon name="clock" size={20}/></span>
         <span className="bn-label">День</span>
       </button>
       <button
@@ -2878,16 +2931,16 @@ function BottomNav({ view, setView, onSearch, onAdd, onDrawer }) {
       <button
         className="bn-item bn-add"
         onClick={onAdd}
-        aria-label="Добавить"
+        aria-label="Добавить событие"
       >
         <span className="bn-icon"><Icon name="plus" size={22}/></span>
       </button>
       <button
         className="bn-item"
         onClick={onDrawer}
-        aria-label="Направления"
+        aria-label="Направления жизни"
       >
-        <span className="bn-icon"><Icon name="sparkles" size={20}/></span>
+        <span className="bn-icon"><Icon name="flag" size={20}/></span>
         <span className="bn-label">Цели</span>
       </button>
       <button
@@ -4125,13 +4178,13 @@ function App() {
         <div className="pill-group">
           <button aria-pressed={view === 'day'}   onClick={() => setView('day')}>День</button>
           <button aria-pressed={view === 'week'}  onClick={() => setView('week')}>Неделя</button>
-          <button aria-pressed={view === 'month'} onClick={() => {/* not implemented yet */}}>Месяц</button>
+          <button aria-pressed={view === 'month'} disabled style={{ opacity: 0.4, cursor: 'not-allowed' }} title="Скоро">Месяц</button>
         </div>
 
-        <button className="icon-btn" title="Поиск (⌘F)" onClick={() => setSearchOpen(true)}>
+        <button className="icon-btn" title="Поиск (⌘F)" aria-label="Поиск" onClick={() => setSearchOpen(true)}>
           <V.Icon name="search" size={16}/>
         </button>
-        <button className="icon-btn primary" title="Добавить (⌘K)" onClick={() => setQuickOpen(true)}>
+        <button className="icon-btn primary" title="Добавить (⌘K)" aria-label="Добавить событие" onClick={() => setQuickOpen(true)}>
           <V.Icon name="plus" size={18}/>
         </button>
       </header>
