@@ -2675,38 +2675,48 @@ function DayView({ blocks, allDayItems, dayIndex, onOpenBlock }) {
   const isToday = dayIndex === NOW.day;
   const containerRef = useRef(null);
 
+  // Dynamic pixel-per-hour: scale up so the shortest event gets at least 72px height.
+  // Capped at 180px/hour to keep the view reasonable on very short events.
+  const hpx = useMemo(() => {
+    if (!blocks.length) return HOUR_PX;
+    const minDur = Math.min(...blocks.map(b => b.end - b.start));
+    const needed = Math.ceil(72 / minDur);
+    return Math.min(Math.max(HOUR_PX, needed), 180);
+  }, [blocks]);
+
+  const totalH = (DAY_END - DAY_START) * hpx + 24;
+
   // Resolve overlap into columns
   const laid = useMemo(() => layoutOverlaps(blocks), [blocks]);
 
-  // Scroll to ~now on mount
+  // Scroll to ~now on mount (using dynamic hpx)
   useEffect(() => {
     if (containerRef.current && isToday) {
-      const targetY = (NOW.hour - DAY_START - 1) * HOUR_PX;
+      const targetY = (NOW.hour - DAY_START - 1) * hpx;
       containerRef.current.scrollTop = Math.max(0, targetY);
     }
-  }, [isToday]);
+  }, [isToday, hpx]);
 
   return (
     <div className="dayview" ref={containerRef}>
-      <div className="hours-gutter" style={{ height: (DAY_END - DAY_START) * HOUR_PX + 24 }}>
+      <div className="hours-gutter" style={{ height: totalH }}>
         {hours.map(h => (
-          <div key={h} className="hour-label" style={{ top: (h - DAY_START) * HOUR_PX }}>
+          <div key={h} className="hour-label" style={{ top: (h - DAY_START) * hpx }}>
             {String(h).padStart(2, '0')}:00
           </div>
         ))}
       </div>
-      <div className="day-canvas" style={{ height: (DAY_END - DAY_START) * HOUR_PX + 24, position: 'relative' }}>
+      <div className="day-canvas" style={{ height: totalH, position: 'relative' }}>
         {hours.map(h => (
-          <div key={h} className="day-grid-line" style={{ top: (h - DAY_START) * HOUR_PX }} />
+          <div key={h} className="day-grid-line" style={{ top: (h - DAY_START) * hpx }} />
         ))}
         {hours.slice(0, -1).map(h => (
-          <div key={`h${h}`} className="day-grid-line half" style={{ top: (h + 0.5 - DAY_START) * HOUR_PX }} />
+          <div key={`h${h}`} className="day-grid-line half" style={{ top: (h + 0.5 - DAY_START) * hpx }} />
         ))}
 
         {laid.map(({ block, col, cols }) => {
-          const cat = CAT_BY_ID[block.cat];
-          const top = (block.start - DAY_START) * HOUR_PX;
-          const height = Math.max((block.end - block.start) * HOUR_PX - 3, 24);
+          const top = (block.start - DAY_START) * hpx;
+          const height = Math.max((block.end - block.start) * hpx - 3, 28);
           const widthPct = 100 / cols;
           const leftPct = col * widthPct;
           return (
@@ -2724,7 +2734,7 @@ function DayView({ blocks, allDayItems, dayIndex, onOpenBlock }) {
               data-block-id={block.id}
             >
               <div className="block-title">{block.title}</div>
-              {height > 40 && (
+              {height > 38 && (
                 <div className="block-time">
                   {fmtH(block.start)} <span style={{ opacity: 0.5 }}>→</span> {fmtH(block.end)}
                   {block.recur && <span className="recur" style={{ marginLeft: 'auto' }}><Icon name="recur" size={11}/></span>}
@@ -2745,7 +2755,7 @@ function DayView({ blocks, allDayItems, dayIndex, onOpenBlock }) {
         })}
 
         {isToday && (
-          <div className="now-bar" style={{ top: (NOW.hour - DAY_START) * HOUR_PX }}>
+          <div className="now-bar" style={{ top: (NOW.hour - DAY_START) * hpx }}>
             <span className="now-label">{fmtH(NOW.hour)}</span>
           </div>
         )}
