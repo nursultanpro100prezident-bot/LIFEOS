@@ -1,0 +1,43 @@
+{
+  "name": "LIFEOS — Smart Calendar",
+  "short_name": "LIFEOS",
+  "description": "Личный планировщик и трекер целей",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#f8f6f2",
+  "background_color": "#f8f6f2",
+  "lang": "ru",
+  "categories": ["productivity", "lifestyle"],
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='40' fill='%232e2b26'/><circle cx='96' cy='96' r='28' fill='none' stroke='%23f8f6f2' stroke-width='8'/><line x1='96' y1='52' x2='96' y2='96' stroke='%23f8f6f2' stroke-width='8' stroke-linecap='round'/><line x1='96' y1='96' x2='124' y2='124' stroke='%23c8b89a' stroke-width='6' stroke-linecap='round'/></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='110' fill='%232e2b26'/><circle cx='256' cy='256' r='76' fill='none' stroke='%23f8f6f2' stroke-width='20'/><line x1='256' y1='140' x2='256' y2='256' stroke='%23f8f6f2' stroke-width='20' stroke-linecap='round'/><line x1='256' y1='256' x2='330' y2='330' stroke='%23c8b89a' stroke-width='16' stroke-linecap='round'/></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "День",
+      "short_name": "День",
+      "description": "Открыть дневной вид",
+      "url": "/?view=day",
+      "icons": []
+    },
+    {
+      "name": "Неделя",
+      "short_name": "Неделя",
+      "description": "Открыть недельный вид",
+      "url": "/?view=week",
+      "icons": []
+    }
+  ]
+}
